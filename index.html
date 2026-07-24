@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F5F2EA">
+<title>Valiz</title>
+</head>
+<body>
+<title>Valiz</title>
+<style>
+  :root {
+    --paper: #F5F2EA;
+    --ink: #1B2A3A;
+    --ink-soft: #5A6675;
+    --card: #FFFFFF;
+    --line: #E5DFD3;
+    --line-strong: #D6CEBE;
+    --blue: #1C56A0;
+    --blue-ink: #123C74;
+    --red: #C1442C;
+    --gold: #C88A22;
+    --gold-soft: #F3E6C8;
+    --green: #2C9A63;
+    --green-soft: #E1F1E7;
+    --shadow: 0 1px 2px rgba(27,42,58,.06), 0 8px 24px rgba(27,42,58,.08);
+    --backdrop-1: #E9E3D6;
+    --backdrop-2: #DDE4E9;
+    --sunken: rgba(27,42,58,.06);
+    --radius: 16px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #14171C;
+      --ink: #ECEAE3;
+      --ink-soft: #98A2AE;
+      --card: #1C2129;
+      --line: #2A313B;
+      --line-strong: #384150;
+      --blue: #6AA6E6;
+      --blue-ink: #9BC4F0;
+      --red: #E27257;
+      --gold: #E6B34A;
+      --gold-soft: #3A3016;
+      --green: #46C286;
+      --green-soft: #16281F;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.45);
+      --backdrop-1: #0E1013;
+      --backdrop-2: #131a22;
+      --sunken: rgba(255,255,255,.07);
+    }
+  }
+  :root[data-theme="light"] {
+    --paper: #F5F2EA; --ink: #1B2A3A; --ink-soft: #5A6675; --card: #FFFFFF;
+    --line: #E5DFD3; --line-strong: #D6CEBE; --blue: #1C56A0; --blue-ink: #123C74;
+    --red: #C1442C; --gold: #C88A22; --gold-soft: #F3E6C8; --green: #2C9A63;
+    --green-soft: #E1F1E7; --shadow: 0 1px 2px rgba(27,42,58,.06), 0 8px 24px rgba(27,42,58,.08);
+    --backdrop-1: #E9E3D6; --backdrop-2: #DDE4E9; --sunken: rgba(27,42,58,.06);
+  }
+  :root[data-theme="dark"] {
+    --paper: #14171C; --ink: #ECEAE3; --ink-soft: #98A2AE; --card: #1C2129;
+    --line: #2A313B; --line-strong: #384150; --blue: #6AA6E6; --blue-ink: #9BC4F0;
+    --red: #E27257; --gold: #E6B34A; --gold-soft: #3A3016; --green: #46C286;
+    --green-soft: #16281F; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.45);
+    --backdrop-1: #0E1013; --backdrop-2: #131a22; --sunken: rgba(255,255,255,.07);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(120% 60% at 50% 0%, var(--backdrop-2), transparent 60%),
+      linear-gradient(160deg, var(--backdrop-1), var(--backdrop-2));
+    background-attachment: fixed;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: ui-monospace, "SF Mono", "Menlo", "Roboto Mono", monospace; }
+
+  /* Phone column */
+  .app {
+    max-width: 448px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background: var(--paper);
+    position: relative;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.04), 0 20px 60px rgba(0,0,0,.18);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  @media (min-width: 480px) {
+    body { padding: 24px 0; }
+    .app { min-height: calc(100vh - 48px); border-radius: 26px; }
+  }
+
+  /* Airmail top stripe */
+  .airmail {
+    height: 6px;
+    background: repeating-linear-gradient(
+      -45deg,
+      var(--red) 0 9px,
+      transparent 9px 18px,
+      var(--blue) 18px 27px,
+      transparent 27px 36px
+    );
+    opacity: .85;
+  }
+
+  header.topbar {
+    background: var(--paper);
+    padding: 14px 18px 0;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .brand { display: flex; align-items: baseline; gap: 8px; }
+  .brand h1 {
+    font-size: 21px; font-weight: 800; letter-spacing: -.02em; margin: 0;
+    color: var(--ink);
+  }
+  .brand .dot { color: var(--red); }
+  .brand .badge {
+    font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--blue); border: 1px solid var(--line-strong);
+    padding: 2px 6px; border-radius: 6px; font-weight: 700;
+  }
+  .tagline { font-size: 12.5px; color: var(--ink-soft); margin: 3px 0 12px; }
+
+  .jetons {
+    display: flex; align-items: center; gap: 6px; flex: 0 0 auto;
+    border: 1px solid var(--line-strong); background: var(--card); color: var(--ink);
+    border-radius: 999px; padding: 6px 11px; font-size: 13px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+  }
+  .jetons b { font-weight: 800; }
+  .coin {
+    width: 14px; height: 14px; border-radius: 50%; flex: 0 0 auto;
+    background: radial-gradient(circle at 35% 30%, #f4dc93, var(--gold));
+    box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.1);
+  }
+  .coin.lg { width: 26px; height: 26px; box-shadow: inset 0 0 0 2px rgba(0,0,0,.1); }
+
+  .packs { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+  .pack {
+    display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+    border: 1px solid var(--line-strong); background: var(--card); color: var(--ink);
+    border-radius: 13px; padding: 14px 16px; cursor: pointer; font-family: inherit;
+    transition: border-color .15s, transform .1s;
+  }
+  .pack:hover { border-color: var(--gold); }
+  .pack:active { transform: scale(.99); }
+  .pack .pack-t { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 800; flex: 1; }
+  .pack .pack-e { font-size: 17px; font-weight: 800; }
+  .pack .pack-u { font-size: 10.5px; color: var(--ink-soft); width: 100%; margin-top: 3px; }
+  .pack-wrap { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; flex: 1; }
+
+  .segmented {
+    display: flex; background: var(--sunken); border-radius: 11px; padding: 3px; gap: 3px;
+  }
+  .segmented button {
+    flex: 1; border: 0; background: transparent; cursor: pointer;
+    font-size: 13.5px; font-weight: 600; color: var(--ink-soft);
+    padding: 8px 0; border-radius: 8px; font-family: inherit;
+    transition: background .18s, color .18s;
+  }
+  .segmented button .cnt { font-size: 11px; opacity: .7; margin-left: 4px; }
+  .segmented button.active {
+    background: var(--card); color: var(--ink);
+    box-shadow: 0 1px 2px rgba(0,0,0,.12);
+  }
+
+  .filters {
+    display: flex; gap: 7px; overflow-x: auto; padding: 12px 18px 12px;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    border-bottom: 1px solid var(--line);
+  }
+  .filters::-webkit-scrollbar { display: none; }
+  .chip {
+    flex: 0 0 auto; border: 1px solid var(--line-strong); background: var(--card);
+    color: var(--ink-soft); border-radius: 999px; padding: 6px 12px;
+    font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap;
+    transition: all .16s; font-family: inherit;
+  }
+  .chip.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+  main.list {
+    flex: 1; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 14px;
+  }
+
+  /* Boarding pass card */
+  .pass {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--shadow); cursor: pointer; overflow: hidden;
+    transition: transform .16s ease, box-shadow .16s ease;
+    animation: rise .35s cubic-bezier(.2,.7,.3,1) both;
+  }
+  .pass:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(27,42,58,.1), 0 16px 34px rgba(27,42,58,.12); }
+  .pass:active { transform: translateY(0) scale(.995); }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  .pass-top { padding: 14px 16px 10px; }
+  .pass-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .who { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .avatar {
+    width: 34px; height: 34px; border-radius: 50%; flex: 0 0 auto;
+    display: grid; place-items: center; font-weight: 800; font-size: 13px; color: #fff;
+  }
+  .avatar.masked { background: var(--line-strong); }
+  .avatar.masked svg { opacity: .95; }
+  .who-txt { min-width: 0; }
+  .who-name { font-size: 13.5px; font-weight: 700; display: flex; align-items: center; gap: 5px; }
+  .verif { color: var(--blue); font-size: 12px; }
+  .who-meta { font-size: 11px; color: var(--ink-soft); display: flex; align-items: center; gap: 4px; }
+  .stars { color: var(--gold); font-weight: 700; }
+
+  .kind-tag {
+    font-size: 10px; letter-spacing: .07em; text-transform: uppercase; font-weight: 700;
+    padding: 4px 8px; border-radius: 6px;
+  }
+  .kind-trajet { background: var(--gold-soft); color: var(--gold); }
+  .kind-demande { background: var(--green-soft); color: var(--green); }
+
+  /* Route line */
+  .route { display: flex; align-items: center; gap: 10px; }
+  .endpoint { text-align: center; }
+  .endpoint.arr { text-align: center; }
+  .code { font-size: 24px; font-weight: 800; letter-spacing: .01em; line-height: 1; }
+  .city { font-size: 10.5px; color: var(--ink-soft); margin-top: 3px; text-transform: uppercase; letter-spacing: .05em; }
+  .path { flex: 1; position: relative; height: 22px; }
+  .path .rail {
+    position: absolute; top: 50%; left: 0; right: 0; height: 0;
+    border-top: 2px dotted var(--line-strong);
+  }
+  .path .plane {
+    position: absolute; top: 50%; left: 0; transform: translate(-50%, -50%);
+    font-size: 15px; color: var(--blue);
+    animation: fly 3.4s ease-in-out infinite;
+  }
+  @keyframes fly { 0%,100% { left: 8%; } 50% { left: 88%; } }
+  @media (prefers-reduced-motion: reduce) {
+    .plane { animation: none; left: 50%; }
+    .pass { animation: none; }
+  }
+
+  .pass-perf {
+    border-top: 2px dashed var(--line-strong); position: relative; margin-top: 4px;
+  }
+  .pass-perf::before, .pass-perf::after {
+    content: ""; position: absolute; top: -9px; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--paper); border: 1px solid var(--line);
+  }
+  .pass-perf::before { left: -9px; }
+  .pass-perf::after { right: -9px; }
+
+  .pass-bottom {
+    padding: 11px 16px 13px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .facts { display: flex; gap: 16px; }
+  .fact .lbl { font-size: 9.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-soft); }
+  .fact .val { font-size: 14px; font-weight: 700; margin-top: 2px; }
+  .fact .val .u { font-size: 11px; font-weight: 600; color: var(--ink-soft); }
+  .cta-mini {
+    background: var(--ink); color: var(--paper); border: 0; border-radius: 10px;
+    padding: 9px 13px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit;
+    white-space: nowrap;
+  }
+  .cta-mini.done { background: var(--green-soft); color: var(--green); }
+
+  .demand-note {
+    padding: 0 16px 12px; font-size: 12.5px; color: var(--ink-soft); font-style: italic;
+  }
+  .cross-hint {
+    padding: 8px 16px; font-size: 11.5px; color: var(--blue); font-weight: 600;
+    background: linear-gradient(0deg, rgba(28,86,160,.06), transparent);
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  .empty { text-align: center; color: var(--ink-soft); padding: 60px 30px; }
+  .empty .em { font-size: 34px; opacity: .5; }
+  .empty p { font-size: 13.5px; margin: 12px 0 0; }
+
+  /* FAB */
+  .fab {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+    z-index: 40; width: min(412px, calc(100% - 32px));
+    background: var(--blue); color: #fff; border: 0; border-radius: 14px;
+    padding: 15px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+    box-shadow: 0 6px 18px rgba(28,86,160,.4); display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: transform .15s;
+  }
+  @media (min-width: 480px) { .fab { bottom: 40px; } }
+  .fab:active { transform: translateX(-50%) scale(.98); }
+
+  /* Sheets */
+  .overlay {
+    position: fixed; inset: 0; z-index: 50; background: rgba(10,15,20,.5);
+    backdrop-filter: blur(2px); display: none; align-items: flex-end; justify-content: center;
+  }
+  .overlay.open { display: flex; animation: fade .2s; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  .sheet {
+    background: var(--paper); width: 100%; max-width: 448px; max-height: 92vh; overflow-y: auto;
+    border-radius: 22px 22px 0 0; padding: 8px 20px 28px;
+    animation: slideUp .28s cubic-bezier(.2,.8,.2,1);
+  }
+  @media (min-width: 480px) { .sheet { border-radius: 22px; margin-bottom: 5vh; } }
+  @keyframes slideUp { from { transform: translateY(40px); opacity: .6; } to { transform: none; opacity: 1; } }
+  .grabber { width: 40px; height: 4px; border-radius: 2px; background: var(--line-strong); margin: 8px auto 14px; }
+  .sheet h2 { font-size: 18px; font-weight: 800; margin: 0 0 4px; letter-spacing: -.01em; }
+  .sheet .sub { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 18px; }
+
+  .field { margin-bottom: 14px; }
+  .field label { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); font-weight: 700; display: block; margin-bottom: 6px; }
+  .field input, .field select {
+    width: 100%; border: 1px solid var(--line-strong); background: var(--card); color: var(--ink);
+    border-radius: 11px; padding: 12px 13px; font-size: 15px; font-family: inherit; -webkit-appearance: none;
+  }
+  .field input:focus, .field select:focus { outline: 2px solid var(--blue); outline-offset: 0; border-color: var(--blue); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .seg-form { display: flex; gap: 6px; background: var(--sunken); border-radius: 11px; padding: 4px; margin-bottom: 18px; }
+  .seg-form button { flex: 1; border: 0; background: transparent; padding: 10px; border-radius: 8px; font-weight: 700; font-size: 13.5px; cursor: pointer; color: var(--ink-soft); font-family: inherit; }
+  .seg-form button.active { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+  .btn-primary {
+    width: 100%; background: var(--blue); color: #fff; border: 0; border-radius: 13px;
+    padding: 15px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; margin-top: 6px;
+  }
+  .btn-ghost {
+    width: 100%; background: transparent; color: var(--ink-soft); border: 0;
+    padding: 13px; font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+
+  /* Detail */
+  .d-route { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px; margin-bottom: 16px; }
+  .d-meta { display: flex; gap: 20px; margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--line-strong); }
+  .d-fact .lbl { font-size: 9.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-soft); }
+  .d-fact .val { font-size: 16px; font-weight: 800; margin-top: 3px; }
+  .trust-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .trust-pill { font-size: 11.5px; font-weight: 600; color: var(--ink-soft); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 6px 11px; }
+
+  .locked-box {
+    text-align: center; border: 1.5px dashed var(--line-strong); border-radius: 16px;
+    padding: 22px 18px; background: repeating-linear-gradient(45deg, transparent 0 10px, rgba(200,138,34,.04) 10px 20px);
+  }
+  .locked-box .lock-em { font-size: 26px; }
+  .locked-box h3 { font-size: 15px; margin: 8px 0 4px; }
+  .locked-box p { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 16px; }
+  .unlock-btn {
+    width: 100%; background: linear-gradient(135deg, var(--gold), #b57a17); color: #fff; border: 0;
+    border-radius: 13px; padding: 15px; font-size: 15px; font-weight: 800; cursor: pointer; font-family: inherit;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 6px 16px rgba(200,138,34,.35);
+  }
+  .unlock-btn .price { background: rgba(255,255,255,.22); padding: 3px 9px; border-radius: 7px; }
+
+  .contact-card { border: 1px solid var(--green); border-radius: 16px; overflow: hidden; }
+  .contact-head { background: var(--green-soft); padding: 12px 16px; font-size: 12.5px; font-weight: 700; color: var(--green); display: flex; align-items: center; gap: 7px; }
+  .contact-body { padding: 6px 16px 16px; }
+  .c-line { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .c-line:last-child { border: 0; }
+  .c-line .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); }
+  .c-line .v { font-size: 15px; font-weight: 700; }
+  .wa-btn { display: block; width: 100%; text-align: center; background: #25D366; color: #062e14; border: 0; border-radius: 12px; padding: 13px; font-size: 14px; font-weight: 800; margin-top: 14px; cursor: pointer; font-family: inherit; text-decoration: none; }
+
+  /* Payment */
+  .pay-amount { text-align: center; margin: 8px 0 20px; }
+  .pay-amount .big { font-size: 40px; font-weight: 800; letter-spacing: -.02em; }
+  .pay-amount .lbl { font-size: 12.5px; color: var(--ink-soft); margin-top: 4px; }
+  .fake-card { border: 1px solid var(--line-strong); border-radius: 13px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 8px; background: var(--card); }
+  .fake-card .cc { width: 34px; height: 22px; border-radius: 4px; background: linear-gradient(135deg, var(--blue), var(--blue-ink)); flex: 0 0 auto; }
+  .fake-card .num { font-size: 13px; letter-spacing: .05em; }
+  .fake-card .num small { color: var(--ink-soft); }
+  .pay-note { font-size: 11px; color: var(--ink-soft); text-align: center; margin: 14px 0 4px; }
+  .earn-note { font-size: 11.5px; color: var(--ink-soft); line-height: 1.5; background: var(--gold-soft); border-radius: 10px; padding: 10px 12px; margin: 0 0 14px; }
+  .earn-note b { color: var(--gold); }
+
+  .success { text-align: center; padding: 20px 0; }
+  .check {
+    width: 66px; height: 66px; border-radius: 50%; background: var(--green-soft); color: var(--green);
+    display: grid; place-items: center; font-size: 32px; margin: 0 auto 14px;
+    animation: pop .4s cubic-bezier(.2,1.5,.4,1);
+  }
+  @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+
+  .toast {
+    position: fixed; bottom: 92px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: var(--paper); padding: 11px 18px; border-radius: 11px;
+    font-size: 13px; font-weight: 600; z-index: 80; opacity: 0; pointer-events: none;
+    transition: opacity .25s, transform .25s; box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .disclaimer { font-size: 10.5px; color: var(--ink-soft); text-align: center; padding: 4px 24px 0; line-height: 1.5; }
+</style>
+
+<div class="airmail"></div>
+<div class="app">
+  <header class="topbar">
+    <div class="brand-row">
+      <div class="brand">
+        <h1>Valiz<span class="dot">.</span></h1>
+        <span class="badge">BE &#8644; Afrique</span>
+      </div>
+      <button class="jetons" id="jetonChip" title="Ton solde de jetons"></button>
+    </div>
+    <p class="tagline">Le trajet de l'un, le colis de l'autre.</p>
+    <div class="segmented" id="seg">
+      <button data-seg="trajets" class="active">Trajets <span class="cnt" id="cntT"></span></button>
+      <button data-seg="demandes">Demandes <span class="cnt" id="cntD"></span></button>
+    </div>
+    <div style="height:12px"></div>
+  </header>
+  <div class="filters" id="filters"></div>
+  <main class="list" id="list"></main>
+  <button class="fab" id="fab">＋ Publier</button>
+</div>
+
+<!-- POST sheet -->
+<div class="overlay" id="postOverlay">
+  <div class="sheet">
+    <div class="grabber"></div>
+    <div class="seg-form" id="postSeg">
+      <button data-kind="trajet" class="active">Je voyage</button>
+      <button data-kind="demande">Je cherche à envoyer</button>
+    </div>
+    <h2 id="postTitle">Publier mon trajet</h2>
+    <p class="sub" id="postSub">Indique tes kilos libres, quelqu'un les remplira.</p>
+    <form id="postForm">
+      <div class="field">
+        <label>Ton prénom</label>
+        <input name="name" required placeholder="Aline" autocomplete="off">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Départ</label>
+          <select name="from" required></select>
+        </div>
+        <div class="field">
+          <label>Arrivée</label>
+          <select name="to" required></select>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label id="dateLbl">Date du vol</label>
+          <input name="date" type="date" required>
+        </div>
+        <div class="field">
+          <label id="kgLbl">Kg dispo</label>
+          <input name="kg" type="number" min="1" max="40" required placeholder="8">
+        </div>
+      </div>
+      <div class="field" id="priceField">
+        <label>Prix indicatif (€/kg)</label>
+        <input name="price" type="number" min="1" max="50" placeholder="12">
+      </div>
+      <div class="field" id="contentField" style="display:none">
+        <label>Que veux-tu envoyer ?</label>
+        <input name="content" placeholder="Médicaments, vêtements...">
+      </div>
+      <button type="submit" class="btn-primary" id="postSubmit">Publier mon trajet</button>
+      <button type="button" class="btn-ghost" data-close>Annuler</button>
+    </form>
+  </div>
+</div>
+
+<!-- DETAIL sheet -->
+<div class="overlay" id="detailOverlay">
+  <div class="sheet" id="detailSheet"></div>
+</div>
+
+<!-- PAY sheet -->
+<div class="overlay" id="payOverlay">
+  <div class="sheet" id="paySheet"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var AIRPORTS = {
+    BRU: "Bruxelles", FIH: "Kinshasa", LBV: "Libreville", DLA: "Douala",
+    NSI: "Yaoundé", DKR: "Dakar", ABJ: "Abidjan", CMN: "Casablanca",
+    CKY: "Conakry", COO: "Cotonou"
+  };
+  var AV_COLORS = ["#1C56A0","#C1442C","#2C9A63","#C88A22","#6B4E9E","#0E7C86"];
+  var LOCK_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="9.5" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg>';
+
+  function anonName(i) { return (i.kind === "trajet" ? "Voyageur" : "Expéditeur") + (i.verified ? " vérifié" : ""); }
+
+  function avatarColor(name) {
+    var s = 0; for (var i=0;i<name.length;i++) s += name.charCodeAt(i);
+    return AV_COLORS[s % AV_COLORS.length];
+  }
+  function initials(name) { return name.trim().slice(0,1).toUpperCase(); }
+  function fmtDate(iso) {
+    var months = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
+    var d = new Date(iso + "T00:00:00");
+    if (isNaN(d)) return iso;
+    return d.getDate() + " " + months[d.getMonth()];
+  }
+
+  // Seed data
+  var SEED = [
+    { id:"t1", kind:"trajet", name:"Aline M.", from:"BRU", to:"FIH", date:"2026-08-12", kg:8, price:12, rating:4.9, trips:14, verified:true, phone:"+32 478 21 44 09", email:"aline.m@mail.be" },
+    { id:"t2", kind:"trajet", name:"Thierry K.", from:"BRU", to:"LBV", date:"2026-08-18", kg:5, price:13, rating:4.7, trips:6, verified:true, phone:"+32 471 88 12 30", email:"t.kombila@mail.be" },
+    { id:"t3", kind:"trajet", name:"Sarah D.", from:"BRU", to:"DKR", date:"2026-08-24", kg:15, price:10, rating:5.0, trips:3, verified:false, phone:"+32 493 55 71 62", email:"sarah.diop@mail.be" },
+    { id:"t4", kind:"trajet", name:"Moussa T.", from:"BRU", to:"DLA", date:"2026-08-29", kg:10, price:12, rating:4.8, trips:21, verified:true, phone:"+32 476 33 90 18", email:"moussa.t@mail.be" },
+    { id:"t5", kind:"trajet", name:"Jean-Marc B.", from:"FIH", to:"BRU", date:"2026-08-15", kg:7, price:12, rating:4.9, trips:11, verified:true, phone:"+243 81 402 77 51", email:"jm.baki@mail.cd" },
+    { id:"t6", kind:"trajet", name:"Fatou N.", from:"BRU", to:"ABJ", date:"2026-09-02", kg:6, price:11, rating:4.6, trips:9, verified:true, phone:"+32 484 12 66 07", email:"fatou.n@mail.be" },
+    { id:"d1", kind:"demande", name:"Grâce L.", from:"BRU", to:"FIH", date:"2026-08-20", kg:4, content:"Médicaments et vêtements pour ma mère", rating:4.8, trips:5, verified:true, phone:"+32 495 70 22 41", email:"grace.l@mail.be" },
+    { id:"d2", kind:"demande", name:"Patrick O.", from:"BRU", to:"LBV", date:"2026-08-25", kg:3, content:"Pièces détachées téléphone", rating:4.5, trips:2, verified:false, phone:"+32 470 91 55 13", email:"p.obame@mail.be" },
+    { id:"d3", kind:"demande", name:"Awa S.", from:"BRU", to:"DKR", date:"2026-08-30", kg:6, content:"Cadeaux famille et produits de soin", rating:5.0, trips:4, verified:true, phone:"+32 486 30 47 88", email:"awa.sow@mail.be" },
+    { id:"d4", kind:"demande", name:"Didier M.", from:"BRU", to:"FIH", date:"2026-08-22", kg:2, content:"Documents et un petit colis", rating:4.7, trips:7, verified:true, phone:"+32 479 62 10 35", email:"d.mukendi@mail.be" }
+  ];
+
+  var LS_ITEMS = "valiz_items_v2", LS_UNLOCK = "valiz_unlocked_v2", LS_BALANCE = "valiz_balance_v2";
+  var TOKEN = { signup: 3, deliveredReward: 2, unlockCost: 1 };
+  var PACKS = [ { t: 5, e: 5 }, { t: 12, e: 10 }, { t: 25, e: 18 } ];
+  var pendingUnlockId = null;
+  function load(k, def) { try { var v = JSON.parse(localStorage.getItem(k)); return v || def; } catch(e){ return def; } }
+  function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+
+  var items = SEED.concat(load(LS_ITEMS, []));
+  var unlocked = load(LS_UNLOCK, {});
+  var _bRaw = localStorage.getItem(LS_BALANCE);
+  var balance = _bRaw === null ? TOKEN.signup : parseInt(_bRaw, 10);
+  if (isNaN(balance)) balance = TOKEN.signup;
+  var state = { seg: "trajets", filter: "ALL" };
+
+  function setBalance(n) {
+    balance = n;
+    try { localStorage.setItem(LS_BALANCE, String(n)); } catch (e) {}
+    updateJetonChip();
+  }
+  function updateJetonChip() {
+    var c = document.getElementById("jetonChip"); if (!c) return;
+    c.innerHTML = '<span class="coin"></span><b>' + balance + '</b> ' + (balance === 1 ? "jeton" : "jetons");
+  }
+
+  var $ = function (s) { return document.querySelector(s); };
+  var listEl = $("#list"), filtersEl = $("#filters");
+
+  function destinationsFor(kind) {
+    var set = {};
+    items.filter(function(i){return i.kind===kind;}).forEach(function(i){ set[i.to] = true; });
+    return Object.keys(set);
+  }
+
+  function crossCount(item) {
+    // how many of the opposite kind want the same destination
+    var opp = item.kind === "trajet" ? "demande" : "trajet";
+    return items.filter(function(i){ return i.kind===opp && i.to===item.to; }).length;
+  }
+
+  function renderFilters() {
+    var dests = destinationsFor(state.seg === "trajets" ? "trajet" : "demande");
+    var html = '<button class="chip ' + (state.filter==="ALL"?"active":"") + '" data-f="ALL">Toutes destinations</button>';
+    dests.forEach(function(code){
+      html += '<button class="chip ' + (state.filter===code?"active":"") + '" data-f="'+code+'">'+AIRPORTS[code]+'</button>';
+    });
+    filtersEl.innerHTML = html;
+  }
+
+  function passHTML(i) {
+    var isTrajet = i.kind === "trajet";
+    var cross = crossCount(i);
+    var crossTxt = "";
+    if (isTrajet && cross > 0) crossTxt = '<div class="cross-hint">&#128231; '+cross+' '+(cross>1?"personnes cherchent":"personne cherche")+' à envoyer vers '+AIRPORTS[i.to]+'</div>';
+    var isUnlocked = !!unlocked[i.id];
+    var nameShown = isUnlocked ? i.name : anonName(i);
+    return ''
+      + '<article class="pass" data-id="'+i.id+'">'
+      +   '<div class="pass-top">'
+      +     '<div class="pass-head">'
+      +       '<div class="who">'
+      +         (isUnlocked
+                    ? '<div class="avatar" style="background:'+avatarColor(i.name)+'">'+initials(i.name)+'</div>'
+                    : '<div class="avatar masked">'+LOCK_SVG+'</div>')
+      +         '<div class="who-txt">'
+      +           '<div class="who-name">'+nameShown+(i.verified?'<span class="verif" title="Identité vérifiée">&#10003;</span>':'')+'</div>'
+      +           '<div class="who-meta"><span class="stars">&#9733; '+i.rating.toFixed(1)+'</span> · '+i.trips+' trajets</div>'
+      +         '</div>'
+      +       '</div>'
+      +       '<span class="kind-tag '+(isTrajet?"kind-trajet":"kind-demande")+'">'+(isTrajet?"Voyage":"Cherche")+'</span>'
+      +     '</div>'
+      +     '<div class="route">'
+      +       '<div class="endpoint"><div class="code mono">'+i.from+'</div><div class="city">'+AIRPORTS[i.from]+'</div></div>'
+      +       '<div class="path"><div class="rail"></div><div class="plane">&#9992;</div></div>'
+      +       '<div class="endpoint arr"><div class="code mono">'+i.to+'</div><div class="city">'+AIRPORTS[i.to]+'</div></div>'
+      +     '</div>'
+      +   '</div>'
+      +   (!isTrajet && i.content ? '<div class="demand-note">« '+i.content+' »</div>' : '')
+      +   crossTxt
+      +   '<div class="pass-perf"></div>'
+      +   '<div class="pass-bottom">'
+      +     '<div class="facts">'
+      +       '<div class="fact"><div class="lbl">'+(isTrajet?"Départ":"Avant le")+'</div><div class="val mono">'+fmtDate(i.date)+'</div></div>'
+      +       '<div class="fact"><div class="lbl">'+(isTrajet?"Kg dispo":"Kg à envoyer")+'</div><div class="val mono">'+i.kg+'<span class="u"> kg</span></div></div>'
+      +       (isTrajet ? '<div class="fact"><div class="lbl">Prix</div><div class="val mono">'+i.price+'<span class="u"> €/kg</span></div></div>' : '')
+      +     '</div>'
+      +     '<button class="cta-mini '+(isUnlocked?"done":"")+'">'+(isUnlocked?"✓ Débloqué":"Contact")+'</button>'
+      +   '</div>'
+      + '</article>';
+  }
+
+  function render() {
+    $("#cntT").textContent = items.filter(function(i){return i.kind==="trajet";}).length;
+    $("#cntD").textContent = items.filter(function(i){return i.kind==="demande";}).length;
+    renderFilters();
+    var kind = state.seg === "trajets" ? "trajet" : "demande";
+    var list = items.filter(function(i){ return i.kind===kind && (state.filter==="ALL" || i.to===state.filter); });
+    list.sort(function(a,b){ return a.date < b.date ? -1 : 1; });
+    if (!list.length) {
+      listEl.innerHTML = '<div class="empty"><div class="em">&#9992;</div><p>Aucun '+(kind==="trajet"?"trajet":"demande")+' ici pour le moment.<br>Publie le premier avec le bouton en bas.</p></div>';
+      return;
+    }
+    listEl.innerHTML = list.map(passHTML).join("");
+  }
+
+  // Segments
+  $("#seg").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if (!b) return;
+    state.seg = b.dataset.seg; state.filter = "ALL";
+    [].forEach.call(this.querySelectorAll("button"), function(x){ x.classList.toggle("active", x===b); });
+    render();
+  });
+  filtersEl.addEventListener("click", function(e){
+    var b = e.target.closest(".chip"); if (!b) return;
+    state.filter = b.dataset.f; render();
+  });
+
+  // Card open
+  listEl.addEventListener("click", function(e){
+    var card = e.target.closest(".pass"); if (!card) return;
+    openDetail(card.dataset.id);
+  });
+
+  // ---- Detail ----
+  function openDetail(id) {
+    var i = items.filter(function(x){return x.id===id;})[0]; if (!i) return;
+    var isTrajet = i.kind === "trajet";
+    var isUnlocked = !!unlocked[i.id];
+    var nameShown = isUnlocked ? i.name : anonName(i);
+    var html = ''
+      + '<div class="grabber"></div>'
+      + '<div class="trust-row">'
+      +   (isUnlocked
+             ? '<div class="avatar" style="background:'+avatarColor(i.name)+';width:42px;height:42px;font-size:16px">'+initials(i.name)+'</div>'
+             : '<div class="avatar masked" style="width:42px;height:42px">'+LOCK_SVG+'</div>')
+      +   '<div><div class="who-name" style="font-size:16px">'+nameShown+(i.verified?' <span class="verif">&#10003;</span>':'')+'</div>'
+      +   '<div class="who-meta"><span class="stars">&#9733; '+i.rating.toFixed(1)+'</span> · '+i.trips+' trajets réalisés</div></div>'
+      + '</div>'
+      + '<div class="trust-row">'
+      +   (i.verified ? '<span class="trust-pill">&#10003; Identité vérifiée</span>' : '<span class="trust-pill">Identité non vérifiée</span>')
+      +   '<span class="trust-pill">'+(isTrajet?"Voyageur":"Expéditeur")+'</span>'
+      + '</div>'
+      + '<div class="d-route">'
+      +   '<div class="route">'
+      +     '<div class="endpoint"><div class="code mono">'+i.from+'</div><div class="city">'+AIRPORTS[i.from]+'</div></div>'
+      +     '<div class="path"><div class="rail"></div><div class="plane">&#9992;</div></div>'
+      +     '<div class="endpoint arr"><div class="code mono">'+i.to+'</div><div class="city">'+AIRPORTS[i.to]+'</div></div>'
+      +   '</div>'
+      +   '<div class="d-meta">'
+      +     '<div class="d-fact"><div class="lbl">'+(isTrajet?"Départ":"Avant le")+'</div><div class="val mono">'+fmtDate(i.date)+'</div></div>'
+      +     '<div class="d-fact"><div class="lbl">'+(isTrajet?"Kg dispo":"Kg à envoyer")+'</div><div class="val mono">'+i.kg+' kg</div></div>'
+      +     (isTrajet ? '<div class="d-fact"><div class="lbl">Prix</div><div class="val mono">'+i.price+' €/kg</div></div>' : '')
+      +   '</div>'
+      +   (!isTrajet && i.content ? '<div class="demand-note" style="padding:14px 0 0">« '+i.content+' »</div>' : '')
+      + '</div>';
+
+    if (isUnlocked) {
+      html += contactHTML(i);
+    } else {
+      html += ''
+        + '<div class="locked-box">'
+        +   '<div class="lock-em">&#128274;</div>'
+        +   '<h3>Identité et contact masqués</h3>'
+        +   '<p>Le nom et les coordonnées ne sont révélés qu\'après le déblocage, pour '+(isTrajet?"organiser l'envoi de ton colis":"organiser le transport")+' via Valiz.</p>'
+        +   '<button class="unlock-btn" data-unlock="'+i.id+'">Débloquer le contact <span class="price">1 jeton</span></button>'
+        + '</div>';
+    }
+    html += '<button type="button" class="btn-ghost" data-close>Fermer</button>';
+    html += '<p class="disclaimer">Prototype de démonstration. Jetons et contacts fictifs, aucun paiement réel. Le transport de colis reste soumis aux règles douanières.</p>';
+    $("#detailSheet").innerHTML = html;
+    openOverlay("#detailOverlay");
+  }
+
+  function contactHTML(i) {
+    var wa = i.phone.replace(/[^0-9]/g,"");
+    return ''
+      + '<div class="contact-card">'
+      +   '<div class="contact-head">&#10003; Contact débloqué</div>'
+      +   '<div class="contact-body">'
+      +     '<div class="c-line"><span class="lbl">Téléphone</span><span class="v mono">'+i.phone+'</span></div>'
+      +     '<div class="c-line"><span class="lbl">Email</span><span class="v" style="font-size:13px">'+i.email+'</span></div>'
+      +     '<a class="wa-btn" href="https://wa.me/'+wa+'" target="_blank" rel="noopener">Contacter sur WhatsApp</a>'
+      +   '</div>'
+      + '</div>';
+  }
+
+  // Unlock (jetons)
+  document.addEventListener("click", function(e){
+    var u = e.target.closest("[data-unlock]");
+    if (u) { openUnlock(u.dataset.unlock); return; }
+    var s = e.target.closest("[data-spend]");
+    if (s) { doSpend(s.dataset.spend); return; }
+    var pk = e.target.closest("[data-pack]");
+    if (pk) { doBuy(parseInt(pk.dataset.pack, 10)); return; }
+    var bt = e.target.closest("[data-buy]");
+    if (bt) { openBuy(bt.dataset.buy || null); return; }
+    var c = e.target.closest("[data-close]");
+    if (c) { closeAll(); return; }
+  });
+
+  function successHTML(title, sub) {
+    return '<div class="grabber"></div><div class="success"><div class="check">&#10003;</div>'
+      + '<h2 style="text-align:center">' + title + '</h2>'
+      + '<p class="sub" style="text-align:center">' + sub + '</p></div>';
+  }
+
+  function openUnlock(id) {
+    if (balance >= TOKEN.unlockCost) openSpend(id);
+    else openBuy(id);
+  }
+
+  function openSpend(id) {
+    var i = items.filter(function(x){return x.id===id;})[0]; if (!i) return;
+    var left = balance - TOKEN.unlockCost;
+    $("#paySheet").innerHTML = ''
+      + '<div class="grabber"></div>'
+      + '<h2>Débloquer le contact</h2>'
+      + '<p class="sub">Le nom, le téléphone et l\'email du '+(i.kind==="trajet"?"voyageur":"expéditeur")+' se révèlent, pour organiser la mise en relation.</p>'
+      + '<div class="pay-amount"><div class="big" style="display:flex;align-items:center;justify-content:center;gap:10px"><span class="coin lg"></span>1 jeton</div><div class="lbl">Il te restera '+left+' '+(left===1?"jeton":"jetons")+'</div></div>'
+      + '<button class="btn-primary" style="background:linear-gradient(135deg,var(--gold),#b57a17)" data-spend="'+i.id+'">Utiliser 1 jeton</button>'
+      + '<button type="button" class="btn-ghost" data-close>Annuler</button>';
+    openOverlay("#payOverlay");
+  }
+
+  function doSpend(id) {
+    setBalance(balance - TOKEN.unlockCost);
+    unlocked[id] = true; save(LS_UNLOCK, unlocked);
+    $("#paySheet").innerHTML = successHTML("Contact débloqué !", "Tu peux maintenant contacter directement. Solde : "+balance+" "+(balance===1?"jeton":"jetons")+".");
+    setTimeout(function(){
+      closeOverlay("#payOverlay");
+      openDetail(id);
+      render();
+    }, 950);
+  }
+
+  function openBuy(returnId) {
+    pendingUnlockId = returnId || null;
+    var packsHTML = PACKS.map(function(p, idx){
+      return '<button class="pack" data-pack="'+idx+'">'
+        + '<div class="pack-wrap"><div class="pack-t"><span class="coin"></span>'+p.t+' jetons</div>'
+        + '<div class="pack-u">'+(p.e/p.t).toFixed(2).replace('.',',')+' € le jeton</div></div>'
+        + '<div class="pack-e">'+p.e+' €</div>'
+        + '</button>';
+    }).join("");
+    var sub = balance > 0
+      ? "Ajoute des jetons à ton solde. Chaque déblocage coûte 1 jeton."
+      : "Tu n'as plus de jetons. Choisis un pack pour continuer.";
+    $("#paySheet").innerHTML = ''
+      + '<div class="grabber"></div>'
+      + '<h2>Recharge tes jetons</h2>'
+      + '<p class="sub">'+sub+'</p>'
+      + '<div class="packs">'+packsHTML+'</div>'
+      + '<p class="earn-note">Tu gagnes aussi <b>'+TOKEN.deliveredReward+' jetons</b> à chaque transport livré et confirmé. Publier une annonce ne rapporte rien, donc pas de fausses offres pour farmer.</p>'
+      + '<div class="fake-card"><div class="cc"></div><div class="num">•••• •••• •••• 4242 <small>· 08/28</small></div></div>'
+      + '<button type="button" class="btn-ghost" data-close>Plus tard</button>'
+      + '<p class="pay-note">Paiement fictif · aucune carte n\'est débitée</p>';
+    openOverlay("#payOverlay");
+  }
+
+  function doBuy(idx) {
+    var p = PACKS[idx]; if (!p) return;
+    setBalance(balance + p.t);
+    var rid = pendingUnlockId; pendingUnlockId = null;
+    $("#paySheet").innerHTML = successHTML("+"+p.t+" jetons", "Nouveau solde : "+balance+" jetons.");
+    setTimeout(function(){
+      closeOverlay("#payOverlay");
+      if (rid) openSpend(rid); else render();
+    }, 900);
+  }
+
+  // ---- Post form ----
+  var fromSel = document.querySelector('[name="from"]'), toSel = document.querySelector('[name="to"]');
+  function fillAirports() {
+    var opts = Object.keys(AIRPORTS).map(function(c){ return '<option value="'+c+'">'+c+' · '+AIRPORTS[c]+'</option>'; }).join("");
+    fromSel.innerHTML = opts; toSel.innerHTML = opts;
+    fromSel.value = "BRU"; toSel.value = "FIH";
+  }
+  fillAirports();
+
+  var postKind = "trajet";
+  $("#postSeg").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if (!b) return;
+    postKind = b.dataset.kind;
+    [].forEach.call(this.querySelectorAll("button"), function(x){ x.classList.toggle("active", x===b); });
+    var trajet = postKind === "trajet";
+    $("#postTitle").textContent = trajet ? "Publier mon trajet" : "Publier ma demande";
+    $("#postSub").textContent = trajet ? "Indique tes kilos libres, quelqu'un les remplira." : "Décris ton colis, un voyageur le prendra.";
+    $("#dateLbl").textContent = trajet ? "Date du vol" : "À livrer avant le";
+    $("#kgLbl").textContent = trajet ? "Kg dispo" : "Kg à envoyer";
+    $("#priceField").style.display = trajet ? "block" : "none";
+    $("#contentField").style.display = trajet ? "none" : "block";
+    $("#postSubmit").textContent = trajet ? "Publier mon trajet" : "Publier ma demande";
+  });
+
+  $("#fab").addEventListener("click", function(){ openOverlay("#postOverlay"); });
+  $("#jetonChip").addEventListener("click", function(){ openBuy(null); });
+
+  $("#postForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var f = e.target;
+    if (f.from.value === f.to.value) { showToast("Départ et arrivée identiques"); return; }
+    var item = {
+      id: "u" + Date.now(),
+      kind: postKind,
+      name: f.name.value.trim() || "Toi",
+      from: f.from.value, to: f.to.value,
+      date: f.date.value,
+      kg: parseInt(f.kg.value,10) || 1,
+      rating: 5.0, trips: 0, verified: false,
+      phone: "+32 470 00 00 00", email: "toi@mail.be"
+    };
+    if (postKind === "trajet") item.price = parseInt(f.price.value,10) || 12;
+    else item.content = f.content.value.trim() || "Colis";
+    items.push(item);
+    save(LS_ITEMS, load(LS_ITEMS, []).concat([item]));
+    state.seg = postKind === "trajet" ? "trajets" : "demandes";
+    state.filter = "ALL";
+    [].forEach.call($("#seg").querySelectorAll("button"), function(x){ x.classList.toggle("active", x.dataset.seg===state.seg); });
+    f.reset(); fillAirports();
+    closeOverlay("#postOverlay");
+    showToast(postKind === "trajet" ? "Trajet publié ! Il est en ligne." : "Demande publiée ! Elle est en ligne.");
+    render();
+  });
+
+  // ---- Overlay helpers ----
+  function openOverlay(sel) { $(sel).classList.add("open"); document.body.style.overflow = "hidden"; }
+  function closeOverlay(sel) { $(sel).classList.remove("open"); document.body.style.overflow = ""; }
+  function closeAll() { [].forEach.call(document.querySelectorAll(".overlay"), function(o){ o.classList.remove("open"); }); document.body.style.overflow = ""; }
+  [].forEach.call(document.querySelectorAll(".overlay"), function(o){
+    o.addEventListener("click", function(e){ if (e.target === o) closeAll(); });
+  });
+
+  var toastT;
+  function showToast(msg) {
+    var t = $("#toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toastT); toastT = setTimeout(function(){ t.classList.remove("show"); }, 2200);
+  }
+
+  updateJetonChip();
+  render();
+})();
+</script>
+
+</body>
+</html>
