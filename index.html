@@ -462,6 +462,69 @@
 
   :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
   .pass:focus-visible { outline-offset: 3px; }
+  /* ---- Compte et profil (phase 2) ---- */
+  .head-actions { display:flex; align-items:center; gap:8px; }
+  .me-btn {
+    display:flex; align-items:center; gap:7px; padding:5px 10px 5px 5px;
+    border:1px solid var(--line-strong); background:var(--card); color:var(--ink);
+    border-radius:999px; font:inherit; font-size:13px; font-weight:600; cursor:pointer;
+  }
+  .me-btn:hover { border-color:var(--blue); }
+  .me-pic {
+    width:26px; height:26px; border-radius:50%; object-fit:cover; display:block;
+    background:var(--sunken); flex:0 0 26px;
+  }
+  .me-ini {
+    width:26px; height:26px; border-radius:50%; display:flex; align-items:center;
+    justify-content:center; font-size:11px; font-weight:700; color:#fff; flex:0 0 26px;
+  }
+  .demo-tag {
+    display:inline-flex; align-items:center; gap:4px; padding:2px 7px; border-radius:999px;
+    background:var(--sunken); color:var(--ink-soft); font-size:11px; font-weight:700;
+    letter-spacing:.02em; text-transform:uppercase;
+  }
+  .auth-tabs { display:flex; gap:6px; background:var(--sunken); padding:4px; border-radius:12px; margin-bottom:14px; }
+  .auth-tabs button {
+    flex:1; padding:9px; border:0; background:transparent; border-radius:9px;
+    font:inherit; font-size:14px; font-weight:600; color:var(--ink-soft); cursor:pointer;
+  }
+  .auth-tabs button.active { background:var(--card); color:var(--ink); box-shadow:var(--shadow); }
+  .auth-why { font-size:13px; color:var(--ink-soft); line-height:1.5; margin:0 0 14px; }
+  .prof-head { display:flex; align-items:center; gap:14px; margin-bottom:6px; }
+  .prof-pic, .prof-ini {
+    width:64px; height:64px; border-radius:50%; object-fit:cover; flex:0 0 64px;
+    display:flex; align-items:center; justify-content:center; font-size:22px;
+    font-weight:700; color:#fff; background:var(--sunken);
+  }
+  .prof-name { font-size:19px; font-weight:800; letter-spacing:-.01em; }
+  .prof-meta { font-size:13px; color:var(--ink-soft); margin-top:2px; }
+  .prof-stats { display:flex; gap:10px; margin:14px 0 6px; }
+  .prof-stat { flex:1; background:var(--sunken); border-radius:12px; padding:10px; text-align:center; }
+  .prof-stat .v { font-size:17px; font-weight:800; }
+  .prof-stat .l { font-size:11px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.04em; margin-top:2px; }
+  .pending-badge {
+    display:inline-block; padding:2px 8px; border-radius:999px; background:var(--sunken);
+    color:var(--ink-soft); font-size:11px; font-weight:600;
+  }
+  .mini-list { margin:8px 0 0; padding:0; list-style:none; }
+  .mini-item {
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:11px 0; border-bottom:1px solid var(--line);
+  }
+  .mini-item:last-child { border-bottom:0; }
+  .mini-route { font-weight:700; font-size:14px; }
+  .mini-sub { font-size:12px; color:var(--ink-soft); margin-top:2px; }
+  .mini-del {
+    border:1px solid var(--line-strong); background:transparent; color:var(--red);
+    border-radius:9px; padding:6px 10px; font:inherit; font-size:12px; font-weight:600; cursor:pointer;
+  }
+  .sect-title { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); margin:18px 0 2px; }
+  .danger-link { display:block; width:100%; margin-top:16px; background:none; border:0; color:var(--red); font:inherit; font-size:13px; text-decoration:underline; cursor:pointer; }
+  .pic-row { display:flex; align-items:center; gap:12px; margin-bottom:6px; }
+  .pic-btn {
+    border:1px solid var(--line-strong); background:var(--card); color:var(--ink);
+    border-radius:10px; padding:8px 12px; font:inherit; font-size:13px; font-weight:600; cursor:pointer;
+  }
 </style>
 
 <div class="airmail"></div>
@@ -472,7 +535,10 @@
         <h1>Valiz<span class="dot">.</span></h1>
         <span class="beta">BETA</span>
       </div>
-      <button class="jetons" id="jetonChip" title="Ton solde de jetons"></button>
+      <div class="head-actions">
+        <button class="jetons" id="jetonChip" title="Ton solde de jetons"></button>
+        <button class="me-btn" id="meBtn" title="Mon compte"></button>
+      </div>
     </div>
     <p class="tagline">Le trajet de l'un, le colis de l'autre. <button type="button" class="how-link" id="infoBtn">Comment ça marche ?</button> · <a class="how-link" href="mailto:conventpowsey@gmail.com?subject=Valiz%20beta%20-%20retour&body=Ce%20qui%20coince%20ou%20me%20semble%20bizarre%20:%0A">Signaler un bug</a></p>
     <div class="segmented" id="seg">
@@ -503,8 +569,9 @@
     <p class="sub" id="postSub">Indique tes kilos libres, quelqu'un les remplira.</p>
     <form id="postForm">
       <div class="field">
-        <label>Ton prénom</label>
-        <input name="name" required placeholder="Aline" autocomplete="off">
+        <label>Ton numéro de téléphone</label>
+        <input name="phone" required placeholder="+32 470 12 34 56" autocomplete="tel" inputmode="tel">
+        <p class="auth-why" style="margin:6px 0 0">Visible uniquement par la personne qui débloque ton annonce avec un jeton.</p>
       </div>
       <div class="row2">
         <div class="field">
@@ -559,11 +626,46 @@
     <ol class="how-steps">
       <li><span class="how-num">1</span><div><b>Trouve ton trajet.</b> Cherche un voyageur sur ton itinéraire, ville de départ et ville d'arrivée, ou publie ta demande d'envoi.</div></li>
       <li><span class="how-num">2</span><div><b>Débloque le contact.</b> Un jeton révèle le nom et les coordonnées, pour organiser l'envoi ensemble.</div></li>
-      <li><span class="how-num">3</span><div><b>Comment obtenir des jetons.</b> Tu en reçois 3 à l'inscription, tu en gagnes à chaque transport livré, et tu peux en acheter.</div></li>
+      <li><span class="how-num">3</span><div><b>Comment obtenir des jetons.</b> Tu en reçois 3 en créant ton compte, tu en gagnes à chaque transport livré, et tu peux en acheter.</div></li>
     </ol>
-    <p class="how-trust">Les identités sont vérifiées et notées. Valiz met en relation, en toute confiance.</p>
+    <p class="how-trust">Tu peux tout parcourir sans compte. Le compte n'est demandé qu'au moment de publier ou de débloquer un contact, pour que chacun sache à qui il parle.</p>
     <button type="button" class="btn-primary" data-close>Compris</button>
   </div>
+</div>
+
+<!-- AUTH sheet -->
+<div class="overlay" id="authOverlay">
+  <div class="sheet">
+    <div class="grabber"></div>
+    <div class="auth-tabs" id="authTabs">
+      <button data-mode="signup" class="active">Créer mon compte</button>
+      <button data-mode="login">J'ai déjà un compte</button>
+    </div>
+    <h2 id="authTitle">Créer mon compte</h2>
+    <p class="sub" id="authSub">3 jetons offerts, de quoi débloquer tes 3 premiers contacts.</p>
+    <p class="auth-why" id="authWhy">Ton compte garde ton solde et tes annonces, même si tu changes de téléphone. Ton email n'est jamais affiché aux autres.</p>
+    <form id="authForm">
+      <div class="field" id="authNameField">
+        <label>Ton prénom</label>
+        <input name="display_name" placeholder="Aline" autocomplete="given-name">
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input name="email" type="email" required placeholder="toi@mail.be" autocomplete="email" inputmode="email">
+      </div>
+      <div class="field">
+        <label>Mot de passe</label>
+        <input name="password" type="password" required minlength="10" placeholder="10 caractères minimum" autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn-primary" id="authSubmit">Créer mon compte</button>
+      <button type="button" class="btn-ghost" data-close>Plus tard</button>
+    </form>
+  </div>
+</div>
+
+<!-- PROFIL sheet -->
+<div class="overlay" id="profilOverlay">
+  <div class="sheet" id="profilSheet"></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -7161,7 +7263,7 @@
     { id:"d4", kind:"demande", name:"Didier M.", from:"BRU", to:"FIH", date:"2026-08-22", kg:2, content:"Documents et un petit colis", rating:4.7, trips:7, verified:true, phone:"+32 479 62 10 35", email:"d.mukendi@mail.be" }
   ];
 
-  var LS_ITEMS = "valiz_items_v2", LS_UNLOCK = "valiz_unlocked_v2", LS_BALANCE = "valiz_balance_v2", LS_MINE = "valiz_mine_v2";
+  var LS_UNLOCK = "valiz_unlocked_v2";
   var TOKEN = { signup: 3, deliveredReward: 1, unlockCost: 1 };
   var PACKS = [ { t: 5, e: 5 }, { t: 12, e: 10 }, { t: 25, e: 18 } ];
   var pendingUnlockId = null;
@@ -7180,7 +7282,9 @@
   function mapRow(r) {
     return { id: r.id, kind: r.kind, name: r.name, from: r.from_code, to: r.to_code,
       date: r.date, kg: r.kg, price: r.price, content: r.content,
-      rating: Number(r.rating), trips: r.trips, verified: r.verified, phone: r.phone, email: r.email };
+      rating: (r.rating === null || r.rating === undefined) ? null : Number(r.rating),
+      trips: r.trips, verified: r.verified, userId: r.user_id, isDemo: !!r.is_demo,
+      phone: r.phone, email: r.email };
   }
   function loadAnnonces() {
     return fetch(SUPA_REST + "/annonces_public?select=*", { headers: supaHeaders() })
@@ -7189,52 +7293,146 @@
       .catch(function(){ loading = false; render(); });
   }
 
-  // --- Authentification anonyme (identité serveur pour solde et déblocage) ---
-  var LS_SESSION = "valiz_session_v1";
+  // --- Compte permanent (phase 2) ---------------------------------------
+  // Aucune identite n'est creee tant que la personne ne s'inscrit pas :
+  // la liste des annonces se lit avec la cle publique, sans compte.
+  var LS_SESSION = "valiz_session_v2";
   var userToken = null;
+  var me = null;             // { id, email }
+  var monProfil = null;      // { display_name, photo_url, nationalite, ... }
+  var apresConnexion = null; // action mise en attente pendant l'inscription
+
   function supaAuthHeaders(extra) {
     var h = { "apikey": SUPA_KEY, "Authorization": "Bearer " + (userToken || SUPA_KEY) };
     if (extra) { for (var k in extra) h[k] = extra[k]; }
     return h;
   }
+  function jsonOuErreur(r) {
+    return r.text().then(function(t){
+      var j = null; try { j = t ? JSON.parse(t) : null; } catch (e) {}
+      return r.ok ? j : Promise.reject(j || { message: "erreur " + r.status });
+    });
+  }
+  function rpc(nom, args) {
+    return fetch(SUPA_REST + "/rpc/" + nom, {
+      method: "POST",
+      headers: supaAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(args || {})
+    }).then(jsonOuErreur);
+  }
   function saveSession(s) {
-    if (!s || !s.access_token) return Promise.reject("no session");
+    if (!s || !s.access_token) return Promise.reject({ message: "session absente" });
     userToken = s.access_token;
+    me = { id: s.user.id, email: s.user.email };
     try { localStorage.setItem(LS_SESSION, JSON.stringify({ refresh_token: s.refresh_token })); } catch (e) {}
     return s;
   }
-  function signUpAnon() {
-    return fetch(SUPA_URL + "/auth/v1/signup", { method: "POST", headers: { "apikey": SUPA_KEY, "Content-Type": "application/json" }, body: "{}" })
-      .then(function(r){ return r.json(); }).then(saveSession);
+  function clearSession() {
+    userToken = null; me = null; monProfil = null; balance = 0;
+    try { localStorage.removeItem(LS_SESSION); } catch (e) {}
+    unlocked = {}; save(LS_UNLOCK, unlocked);
+  }
+  function chargerMonProfil() {
+    if (!me) { monProfil = null; return Promise.resolve(null); }
+    // mon_profil renvoie aussi mon telephone, que la vue publique n'expose jamais
+    return rpc("mon_profil", {})
+      .then(function(rows){ monProfil = (rows && rows[0]) || null; majCompte(); return monProfil; })
+      .catch(function(){ monProfil = null; majCompte(); return null; });
+  }
+  function creerCompte(email, motdepasse, prenom) {
+    return fetch(SUPA_URL + "/auth/v1/signup", {
+      method: "POST",
+      headers: { "apikey": SUPA_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email, password: motdepasse })
+    }).then(jsonOuErreur)
+      .then(function(j){
+        if (!j || !j.access_token) {
+          return Promise.reject({ message: "Cet email a déjà un compte. Connecte-toi." });
+        }
+        return saveSession(j);
+      })
+      .then(function(){ return rpc("upsert_profil", { p_display_name: prenom }); })
+      .then(function(){ return rpc("reclamer_bonus", {}); })
+      .then(function(solde){ if (typeof solde === "number") setBalance(solde); })
+      .then(chargerMonProfil);
+  }
+  function seConnecter(email, motdepasse) {
+    return fetch(SUPA_URL + "/auth/v1/token?grant_type=password", {
+      method: "POST",
+      headers: { "apikey": SUPA_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email, password: motdepasse })
+    }).then(jsonOuErreur)
+      .then(saveSession)
+      .then(chargerMonProfil)
+      .then(function(){ return loadBalance(); });
+  }
+  function seDeconnecter() {
+    fetch(SUPA_URL + "/auth/v1/logout", { method: "POST", headers: supaAuthHeaders() }).catch(function(){});
+    clearSession();
+    majCompte(); render(); closeAll();
+    showToast("Déconnecté. Tes annonces restent en ligne.");
   }
   function authInit() {
     var saved = null; try { saved = JSON.parse(localStorage.getItem(LS_SESSION)); } catch (e) {}
-    if (saved && saved.refresh_token) {
-      return fetch(SUPA_URL + "/auth/v1/token?grant_type=refresh_token", { method: "POST", headers: { "apikey": SUPA_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ refresh_token: saved.refresh_token }) })
-        .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
-        .then(saveSession)
-        .catch(function(){ return signUpAnon(); });
-    }
-    return signUpAnon();
+    if (!saved || !saved.refresh_token) return Promise.resolve(null);
+    return fetch(SUPA_URL + "/auth/v1/token?grant_type=refresh_token", {
+      method: "POST",
+      headers: { "apikey": SUPA_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: saved.refresh_token })
+    }).then(jsonOuErreur)
+      .then(saveSession)
+      .then(chargerMonProfil)
+      .then(function(){ return loadBalance(); })
+      .catch(function(){ clearSession(); return null; });
   }
   function loadBalance() {
+    if (!me) { setBalance(0); return Promise.resolve(0); }
     return fetch(SUPA_REST + "/balances?select=jetons", { headers: supaAuthHeaders() })
       .then(function(r){ return r.ok ? r.json() : []; })
-      .then(function(rows){ balance = (rows && rows.length) ? rows[0].jetons : TOKEN.signup; updateJetonChip(); })
-      .catch(function(){});
+      .then(function(rows){ setBalance((rows && rows.length) ? rows[0].jetons : 0); return balance; })
+      .catch(function(){ return balance; });
+  }
+  // Toute action qui engage (publier, debloquer, acheter) passe par ici.
+  function exigeCompte(action) {
+    if (me) { action(); return; }
+    apresConnexion = action;
+    ouvrirAuth("signup");
   }
 
   var loading = true;
-  var items = SEED.slice();
+  // le jeu d'exemple ne sert que si la base ne repond pas : il est marque comme demo
+  var items = SEED.map(function(s){ s.isDemo = true; return s; });
   var unlocked = load(LS_UNLOCK, {});
-  var mine = load(LS_MINE, {});
-  var balance = TOKEN.signup;
+  var balance = 0;
   var state = { seg: "trajets", from: "", to: "" };
+
+  function estAMoi(i) { return !!(me && i && i.userId && i.userId === me.id); }
 
   function setBalance(n) { balance = n; updateJetonChip(); }
   function updateJetonChip() {
     var c = document.getElementById("jetonChip"); if (!c) return;
+    if (!me) {
+      c.innerHTML = '<span class="coin"></span><b>3</b> offerts';
+      c.title = "Crée ton compte, 3 jetons offerts";
+      return;
+    }
+    c.title = "Ton solde de jetons";
     c.innerHTML = '<span class="coin"></span><b>' + balance + '</b> ' + (balance === 1 ? "jeton" : "jetons");
+  }
+  function majCompte() {
+    var b = document.getElementById("meBtn"); if (!b) return;
+    if (!me) {
+      b.innerHTML = 'Se connecter';
+      b.title = "Créer un compte ou se connecter";
+      return;
+    }
+    var nom = (monProfil && monProfil.display_name) || "Moi";
+    var photo = monProfil && monProfil.photo_url;
+    b.title = "Mon profil";
+    b.innerHTML = (photo
+        ? '<img class="me-pic" src="' + esc(photo) + '" alt="">'
+        : '<span class="me-ini" style="background:' + avatarColor(nom) + '">' + initials(nom) + '</span>')
+      + esc(nom.split(" ")[0]);
   }
 
   var $ = function (s) { return document.querySelector(s); };
@@ -7340,14 +7538,20 @@
     return items.filter(function(i){ return i.kind===opp && i.to===item.to; }).length;
   }
 
+  // Une vraie annonce neuve n'a ni note ni trajets : on l'annonce honnetement.
+  function notePublique(i) {
+    if (i.rating === null || i.rating === undefined) return '<span class="pending-badge">Nouveau</span>';
+    return '<span class="stars">&#9733; ' + i.rating.toFixed(1) + '</span> · ' + (i.trips || 0) + ' trajets';
+  }
+
   function passHTML(i) {
     var isTrajet = i.kind === "trajet";
     var cross = crossCount(i);
     var crossTxt = "";
     if (isTrajet && cross > 0) crossTxt = '<div class="cross-hint">&#128231; '+cross+' '+(cross>1?"personnes cherchent":"personne cherche")+' à envoyer vers '+AIRPORTS[i.to]+'</div>';
     var isUnlocked = !!unlocked[i.id];
-    var isMine = !!mine[i.id];
-    var revealed = isUnlocked || isMine;
+    var isMine = estAMoi(i);
+    var revealed = isUnlocked || isMine || i.isDemo;
     var nameShown = revealed ? i.name : anonName(i);
     return ''
       + '<article class="pass" data-id="'+i.id+'" tabindex="0" role="button">'
@@ -7359,10 +7563,12 @@
                     : '<div class="avatar masked">'+LOCK_SVG+'</div>')
       +         '<div class="who-txt">'
       +           '<div class="who-name">'+esc(nameShown)+(i.verified?'<span class="verif" title="Identité vérifiée">&#10003;</span>':'')+'</div>'
-      +           '<div class="who-meta"><span class="stars">&#9733; '+i.rating.toFixed(1)+'</span> · '+i.trips+' trajets</div>'
+      +           '<div class="who-meta">'+notePublique(i)+'</div>'
       +         '</div>'
       +       '</div>'
-      +       (isMine ? '<span class="mine-tag">Toi</span>' : '<span class="kind-tag '+(isTrajet?"kind-trajet":"kind-demande")+'">'+(isTrajet?"Voyage":"Cherche")+'</span>')
+      +       (i.isDemo ? '<span class="demo-tag">Démo</span>'
+                        : (isMine ? '<span class="mine-tag">Toi</span>'
+                                  : '<span class="kind-tag '+(isTrajet?"kind-trajet":"kind-demande")+'">'+(isTrajet?"Voyage":"Cherche")+'</span>'))
       +     '</div>'
       +     '<div class="route">'
       +       '<div class="endpoint"><div class="code mono">'+i.from+'</div><div class="city">'+AIRPORTS[i.from]+'</div></div>'
@@ -7379,7 +7585,7 @@
       +       '<div class="fact"><div class="lbl">'+(isTrajet?"Kg dispo":"Kg à envoyer")+'</div><div class="val mono">'+i.kg+'<span class="u"> kg</span></div></div>'
       +       (isTrajet ? '<div class="fact"><div class="lbl">Prix</div><div class="val mono">'+i.price+'<span class="u"> €/kg</span></div></div>' : '')
       +     '</div>'
-      +     '<button class="cta-mini '+(revealed?"done":"")+'">'+(isMine?"Ton annonce":(isUnlocked?"✓ Débloqué":"Contact"))+'</button>'
+      +     '<button class="cta-mini '+(revealed?"done":"")+'">'+(isMine?"Ton annonce":(isUnlocked?"✓ Débloqué":(i.isDemo?"Voir (démo)":"Contact")))+'</button>'
       +   '</div>'
       + '</article>';
   }
@@ -7468,8 +7674,8 @@
     var i = items.filter(function(x){return x.id===id;})[0]; if (!i) return;
     var isTrajet = i.kind === "trajet";
     var isUnlocked = !!unlocked[i.id];
-    var isMine = !!mine[i.id];
-    var revealed = isUnlocked || isMine;
+    var isMine = estAMoi(i);
+    var revealed = isUnlocked || isMine || i.isDemo;
     var nameShown = revealed ? i.name : anonName(i);
     var html = ''
       + '<div class="grabber"></div>'
@@ -7478,7 +7684,7 @@
              ? '<div class="avatar" style="background:'+avatarColor(i.name)+';width:42px;height:42px;font-size:16px">'+initials(i.name)+'</div>'
              : '<div class="avatar masked" style="width:42px;height:42px">'+LOCK_SVG+'</div>')
       +   '<div><div class="who-name" style="font-size:16px">'+esc(nameShown)+(i.verified?' <span class="verif">&#10003;</span>':'')+'</div>'
-      +   '<div class="who-meta"><span class="stars">&#9733; '+i.rating.toFixed(1)+'</span> · '+i.trips+' trajets réalisés</div></div>'
+      +   '<div class="who-meta">'+notePublique(i)+'</div></div>'
       + '</div>'
       + '<div class="trust-row">'
       +   (i.verified ? '<span class="trust-pill">&#10003; Identité vérifiée</span>' : '<span class="trust-pill">Identité non vérifiée</span>')
@@ -7502,6 +7708,14 @@
       html += '<div class="self-note">&#128100; <b>C\'est ton annonce.</b><br>Les autres la voient et peuvent débloquer ton contact pour te joindre.</div>';
     } else if (isUnlocked) {
       html += contactHTML(unlocked[i.id]);
+    } else if (i.isDemo) {
+      html += ''
+        + '<div class="locked-box">'
+        +   '<div class="lock-em">&#128161;</div>'
+        +   '<h3>Annonce de démonstration</h3>'
+        +   '<p>Elle sert à montrer Valiz avec des trajets à l\'écran. Le contact est fictif, donc le voir ne te coûte <b>aucun jeton</b>.</p>'
+        +   '<button class="unlock-btn" data-unlock="'+i.id+'">Voir le contact <span class="price">gratuit</span></button>'
+        + '</div>';
     } else {
       html += ''
         + '<div class="locked-box">'
@@ -7512,7 +7726,10 @@
         + '</div>';
     }
     html += '<button type="button" class="btn-ghost" data-close>Fermer</button>';
-    html += '<p class="disclaimer">Prototype de démonstration. Jetons et contacts fictifs, aucun paiement réel. Le transport de colis reste soumis aux règles douanières.</p>';
+    html += '<p class="disclaimer">' + (i.isDemo
+        ? 'Annonce de démonstration, contact fictif.'
+        : 'Beta. Les paiements de jetons ne sont pas encore réels.')
+      + ' Le transport de colis reste soumis aux règles douanières.</p>';
     $("#detailSheet").innerHTML = html;
     openOverlay("#detailOverlay");
   }
@@ -7522,7 +7739,7 @@
     var wa = (c.phone || "").replace(/[^0-9]/g,"");
     return ''
       + '<div class="contact-card">'
-      +   '<div class="contact-head">&#10003; Contact débloqué</div>'
+      +   '<div class="contact-head">' + (c.demo ? "Contact de démonstration (fictif)" : "&#10003; Contact débloqué") + '</div>'
       +   '<div class="contact-body">'
       +     '<div class="c-line"><span class="lbl">Téléphone</span><span class="v mono">'+esc(c.phone || "")+'</span></div>'
       +     '<div class="c-line"><span class="lbl">Email</span><span class="v" style="font-size:13px">'+esc(c.email || "")+'</span></div>'
@@ -7552,8 +7769,12 @@
   }
 
   function openUnlock(id) {
-    if (balance >= TOKEN.unlockCost) openSpend(id);
-    else openBuy(id);
+    exigeCompte(function(){
+      var i = items.filter(function(x){ return x.id === id; })[0];
+      if (i && i.isDemo) { doSpend(id); return; }   // demonstration : gratuit, sans ecran de depense
+      if (balance >= TOKEN.unlockCost) openSpend(id);
+      else openBuy(id);
+    });
   }
 
   function openSpend(id) {
@@ -7570,24 +7791,26 @@
   }
 
   function doSpend(id) {
-    $("#paySheet").innerHTML = successHTML("Déblocage...", "Un instant.");
-    fetch(SUPA_REST + "/rpc/reveal_contact", {
-      method: "POST",
-      headers: supaAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ p_annonce: id })
-    })
-    .then(function(r){ if (!r.ok) return r.json().then(function(e){ return Promise.reject(e); }); return r.json(); })
+    var i = items.filter(function(x){ return x.id === id; })[0];
+    var gratuit = !!(i && i.isDemo);
+    $("#paySheet").innerHTML = successHTML(gratuit ? "Ouverture..." : "Déblocage...", "Un instant.");
+    if (gratuit) openOverlay("#payOverlay");
+    rpc("reveal_contact", { p_annonce: id })
     .then(function(rows){
-      var c = rows[0] || {};
-      unlocked[id] = { phone: c.phone, email: c.email }; save(LS_UNLOCK, unlocked);
-      $("#paySheet").innerHTML = successHTML("Contact débloqué !", "Tu peux maintenant contacter directement.");
-      loadBalance();
+      var c = (rows && rows[0]) || {};
+      unlocked[id] = { phone: c.phone, email: c.email, demo: !!c.est_demo };
+      save(LS_UNLOCK, unlocked);
+      if (typeof c.jetons_restants === "number") setBalance(c.jetons_restants);
+      $("#paySheet").innerHTML = c.est_demo
+        ? successHTML("Contact de démonstration", "Aucun jeton dépensé, ce contact est fictif.")
+        : successHTML("Contact débloqué !", "Tu peux maintenant contacter directement.");
       setTimeout(function(){ closeOverlay("#payOverlay"); openDetail(id); render(); }, 950);
     })
     .catch(function(err){
       closeOverlay("#payOverlay");
       var msg = (err && err.message) || "";
       if (msg.indexOf("insuffisant") >= 0) { openBuy(id); }
+      else if (msg.indexOf("compte requis") >= 0) { exigeCompte(function(){ openUnlock(id); }); }
       else { showToast("Déblocage impossible, réessaie."); }
     });
   }
@@ -7618,20 +7841,25 @@
 
   function doBuy(idx) {
     var p = PACKS[idx]; if (!p) return;
-    $("#paySheet").innerHTML = successHTML("Paiement...", "Un instant.");
-    fetch(SUPA_REST + "/rpc/add_jetons", {
-      method: "POST",
-      headers: supaAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ p_n: p.t })
-    })
-    .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
-    .then(function(newBal){
-      if (typeof newBal === "number") { balance = newBal; updateJetonChip(); } else { loadBalance(); }
-      var rid = pendingUnlockId; pendingUnlockId = null;
-      $("#paySheet").innerHTML = successHTML("+"+p.t+" jetons", "Nouveau solde : "+balance+" jetons.");
-      setTimeout(function(){ closeOverlay("#payOverlay"); if (rid) openSpend(rid); else render(); }, 900);
-    })
-    .catch(function(){ showToast("Achat impossible, réessaie."); });
+    exigeCompte(function(){
+      $("#paySheet").innerHTML = successHTML("Paiement...", "Un instant.");
+      openOverlay("#payOverlay");
+      // le pack est designe par son numero : les tailles et les prix vivent sur le serveur
+      rpc("acheter_pack", { p_pack: idx + 1 })
+      .then(function(newBal){
+        if (typeof newBal === "number") setBalance(newBal); else loadBalance();
+        var rid = pendingUnlockId; pendingUnlockId = null;
+        $("#paySheet").innerHTML = successHTML("+"+p.t+" jetons", "Nouveau solde : "+balance+" jetons.");
+        setTimeout(function(){ closeOverlay("#payOverlay"); if (rid) openSpend(rid); else render(); }, 900);
+      })
+      .catch(function(err){
+        closeOverlay("#payOverlay");
+        var msg = (err && err.message) || "";
+        showToast(msg.indexOf("limite") >= 0
+          ? "Limite de 3 achats par jour atteinte."
+          : "Achat impossible, réessaie.");
+      });
+    });
   }
 
   // ---- Post form ----
@@ -7671,8 +7899,274 @@
     $("#postSubmit").textContent = trajet ? "Publier mon trajet" : "Publier ma demande";
   });
 
-  $("#fab").addEventListener("click", function(){ openOverlay("#postOverlay"); });
-  $("#jetonChip").addEventListener("click", function(){ openBuy(null); });
+  $("#fab").addEventListener("click", function(){
+    exigeCompte(function(){ remplirTelephone(); openOverlay("#postOverlay"); });
+  });
+  $("#jetonChip").addEventListener("click", function(){
+    if (!me) { ouvrirAuth("signup"); return; }
+    openBuy(null);
+  });
+  $("#meBtn").addEventListener("click", function(){
+    if (!me) { ouvrirAuth("login"); return; }
+    ouvrirProfil();
+  });
+
+  // ---- Ecran compte -----------------------------------------------------
+  var authMode = "signup";
+  function ouvrirAuth(mode) {
+    authMode = mode || "signup";
+    var estInscription = authMode === "signup";
+    [].forEach.call($("#authTabs").querySelectorAll("button"), function(b){
+      b.classList.toggle("active", b.dataset.mode === authMode);
+    });
+    $("#authTitle").textContent = estInscription ? "Créer mon compte" : "Me connecter";
+    $("#authSub").textContent = estInscription
+      ? "3 jetons offerts, de quoi débloquer tes 3 premiers contacts."
+      : "Retrouve ton solde, tes annonces et tes contacts débloqués.";
+    $("#authWhy").textContent = estInscription
+      ? "Ton compte garde ton solde et tes annonces, même si tu changes de téléphone. Ton email n'est jamais affiché aux autres."
+      : "Ton email n'est jamais affiché aux autres utilisateurs.";
+    $("#authNameField").style.display = estInscription ? "block" : "none";
+    var nom = document.querySelector('#authForm [name="display_name"]');
+    if (nom) nom.required = estInscription;
+    $("#authSubmit").textContent = estInscription ? "Créer mon compte" : "Me connecter";
+    var pwd = document.querySelector('#authForm [name="password"]');
+    if (pwd) { pwd.minLength = estInscription ? 10 : 1; pwd.placeholder = estInscription ? "10 caractères minimum" : "Ton mot de passe"; }
+    openOverlay("#authOverlay");
+  }
+
+  $("#authTabs").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if (!b) return;
+    ouvrirAuth(b.dataset.mode);
+  });
+
+  $("#authForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var f = e.target;
+    var email = (f.email.value || "").trim();
+    var pwd = f.password.value || "";
+    var nom = (f.display_name.value || "").trim();
+    var btn = $("#authSubmit");
+    if (authMode === "signup" && nom.length < 2) { showToast("Ton prénom, pour que les autres sachent à qui ils parlent"); return; }
+    if (authMode === "signup" && pwd.length < 10) { showToast("Mot de passe : 10 caractères minimum"); return; }
+    btn.disabled = true;
+    var travail = authMode === "signup" ? creerCompte(email, pwd, nom) : seConnecter(email, pwd);
+    travail
+      .then(function(){
+        f.reset();
+        closeOverlay("#authOverlay");
+        majCompte(); updateJetonChip(); render();
+        showToast(authMode === "signup" ? "Bienvenue ! 3 jetons t'attendent." : "Content de te revoir.");
+        var suite = apresConnexion; apresConnexion = null;
+        if (suite) setTimeout(suite, 350);
+      })
+      .catch(function(err){
+        var msg = (err && (err.message || err.msg || err.error_description)) || "";
+        if (/already registered|déjà un compte/i.test(msg)) {
+          showToast("Cet email a déjà un compte. Connecte-toi.");
+          ouvrirAuth("login");
+        } else if (/invalid login|credentials/i.test(msg)) {
+          showToast("Email ou mot de passe incorrect.");
+        } else if (/password/i.test(msg)) {
+          showToast("Mot de passe trop court : 10 caractères minimum.");
+        } else {
+          showToast("Connexion impossible, réessaie.");
+        }
+      })
+      .then(function(){ btn.disabled = false; });
+  });
+
+  // ---- Profil -----------------------------------------------------------
+  function moisAnnee(iso) {
+    if (!iso) return "";
+    var d = new Date(iso);
+    var mois = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+    return mois[d.getMonth()] + " " + d.getFullYear();
+  }
+
+  function ouvrirProfil() {
+    if (!me) { ouvrirAuth("login"); return; }
+    dessinerProfil();
+    openOverlay("#profilOverlay");
+    chargerMonProfil().then(dessinerProfil);
+  }
+
+  function dessinerProfil() {
+    if (!me) return;
+    var p = monProfil || {};
+    var nom = p.display_name || "Moi";
+    var aujourdhui = new Date().toISOString().slice(0, 10);
+    var miennes = items.filter(estAMoi);
+    var avenir = miennes.filter(function(i){ return i.date >= aujourdhui; });
+    var passees = miennes.filter(function(i){ return i.date < aujourdhui; });
+
+    function ligne(i) {
+      return '<li class="mini-item"><div>'
+        + '<div class="mini-route">' + i.from + ' &#8594; ' + i.to + '</div>'
+        + '<div class="mini-sub">' + fmtDate(i.date) + ' · ' + i.kg + ' kg · '
+        + (i.kind === "trajet" ? "trajet" : "demande") + '</div></div>'
+        + '<button class="mini-del" data-suppr="' + i.id + '">Retirer</button></li>';
+    }
+
+    $("#profilSheet").innerHTML = ''
+      + '<div class="grabber"></div>'
+      + '<div class="prof-head">'
+      +   (p.photo_url
+             ? '<img class="prof-pic" src="' + esc(p.photo_url) + '" alt="">'
+             : '<div class="prof-ini" style="background:' + avatarColor(nom) + '">' + initials(nom) + '</div>')
+      +   '<div><div class="prof-name">' + esc(nom) + '</div>'
+      +     '<div class="prof-meta">' + (p.nationalite ? esc(p.nationalite) + ' · ' : '')
+      +       'membre depuis ' + moisAnnee(p.created_at) + '</div>'
+      +     '<div class="prof-meta" style="margin-top:4px">'
+      +       (p.phone_verified
+                 ? '<span class="trust-pill">&#10003; Identité vérifiée</span>'
+                 : '<span class="pending-badge">Vérification par SMS bientôt</span>')
+      +     '</div>'
+      +   '</div>'
+      + '</div>'
+      + '<div class="prof-stats">'
+      +   '<div class="prof-stat"><div class="v">' + balance + '</div><div class="l">jetons</div></div>'
+      +   '<div class="prof-stat"><div class="v">' + miennes.length + '</div><div class="l">annonces</div></div>'
+      +   '<div class="prof-stat"><div class="v">' + (p.trips || 0) + '</div><div class="l">transports</div></div>'
+      + '</div>'
+      + '<div class="pic-row">'
+      +   '<button type="button" class="pic-btn" id="btnPhoto">' + (p.photo_url ? "Changer ma photo" : "Ajouter une photo") + '</button>'
+      +   '<input type="file" id="inputPhoto" accept="image/jpeg,image/png,image/webp" style="display:none">'
+      +   '<span class="prof-meta" id="photoEtat"></span>'
+      + '</div>'
+      + '<form id="profilForm">'
+      +   '<div class="field"><label>Prénom affiché</label>'
+      +     '<input name="display_name" required value="' + esc(nom) + '" autocomplete="given-name"></div>'
+      +   '<div class="row2">'
+      +     '<div class="field"><label>Nationalité</label>'
+      +       '<input name="nationalite" placeholder="Belge" value="' + esc(p.nationalite || "") + '"></div>'
+      +     '<div class="field"><label>Téléphone</label>'
+      +       '<input name="phone" placeholder="+32 470 12 34 56" value="' + esc(p.phone || "") + '" inputmode="tel"></div>'
+      +   '</div>'
+      +   '<button type="submit" class="btn-primary">Enregistrer</button>'
+      + '</form>'
+      + '<div class="sect-title">Mes annonces à venir</div>'
+      + (avenir.length ? '<ul class="mini-list">' + avenir.map(ligne).join("") + '</ul>'
+                       : '<p class="prof-meta">Aucune annonce à venir.</p>')
+      + '<div class="sect-title">Passées</div>'
+      + (passees.length ? '<ul class="mini-list">' + passees.map(ligne).join("") + '</ul>'
+                        : '<p class="prof-meta">Rien pour le moment.</p>')
+      + '<p class="prof-meta" style="margin-top:16px">Les statuts « en cours » et « livré » arriveront avec la validation de livraison par code.</p>'
+      + '<button type="button" class="btn-ghost" id="btnDeconnexion" style="margin-top:14px">Me déconnecter</button>'
+      + '<button type="button" class="btn-ghost" data-close>Fermer</button>'
+      + '<button type="button" class="danger-link" id="btnSupprCompte">Supprimer mon compte et mes données</button>';
+  }
+
+  // Redimensionne dans le navigateur : on n'envoie jamais une photo de 12 Mo.
+  function reduireImage(file, cote) {
+    return new Promise(function(resolve, reject){
+      var lecteur = new FileReader();
+      lecteur.onerror = function(){ reject(new Error("lecture impossible")); };
+      lecteur.onload = function(){
+        var img = new Image();
+        img.onerror = function(){ reject(new Error("image illisible")); };
+        img.onload = function(){
+          var c = Math.min(cote, Math.max(img.width, img.height));
+          var ratio = c / Math.max(img.width, img.height);
+          var w = Math.round(img.width * ratio), h = Math.round(img.height * ratio);
+          var canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          canvas.toBlob(function(blob){
+            blob ? resolve(blob) : reject(new Error("conversion impossible"));
+          }, "image/jpeg", 0.85);
+        };
+        img.src = lecteur.result;
+      };
+      lecteur.readAsDataURL(file);
+    });
+  }
+
+  // Efface le fichier lui-meme, que la suppression du compte en base ne peut pas atteindre.
+  function supprimerMaPhoto() {
+    var url = monProfil && monProfil.photo_url;
+    var marque = "/storage/v1/object/public/avatars/";
+    if (!url || url.indexOf(marque) < 0) return Promise.resolve();
+    var chemin = url.split(marque)[1];
+    return fetch(SUPA_URL + "/storage/v1/object/avatars/" + chemin, {
+      method: "DELETE",
+      headers: { "apikey": SUPA_KEY, "Authorization": "Bearer " + userToken }
+    }).catch(function(){});
+  }
+
+  function envoyerPhoto(file) {
+    var etat = document.getElementById("photoEtat");
+    if (etat) etat.textContent = "Envoi...";
+    return reduireImage(file, 512)
+      .then(function(blob){
+        var chemin = me.id + "/avatar-" + Date.now() + ".jpg";
+        return fetch(SUPA_URL + "/storage/v1/object/avatars/" + chemin, {
+          method: "POST",
+          headers: { "apikey": SUPA_KEY, "Authorization": "Bearer " + userToken, "Content-Type": "image/jpeg" },
+          body: blob
+        }).then(function(r){ return r.ok ? chemin : Promise.reject(r.status); });
+      })
+      .then(function(chemin){
+        var url = SUPA_URL + "/storage/v1/object/public/avatars/" + chemin;
+        return rpc("upsert_profil", {
+          p_display_name: (monProfil && monProfil.display_name) || "Moi",
+          p_photo_url: url
+        });
+      })
+      .then(chargerMonProfil)
+      .then(function(){ dessinerProfil(); render(); showToast("Photo mise à jour."); })
+      .catch(function(){
+        if (etat) etat.textContent = "";
+        showToast("Photo impossible à envoyer (2 Mo maximum, jpg ou png).");
+      });
+  }
+
+  $("#profilSheet").addEventListener("click", function(e){
+    if (e.target.closest("#btnPhoto")) { document.getElementById("inputPhoto").click(); return; }
+    if (e.target.closest("#btnDeconnexion")) { seDeconnecter(); return; }
+    var suppr = e.target.closest("[data-suppr]");
+    if (suppr) {
+      if (!window.confirm("Retirer cette annonce ?")) return;
+      rpc("supprimer_mon_annonce", { p_annonce: suppr.dataset.suppr })
+        .then(function(){ return loadAnnonces(); })
+        .then(function(){ dessinerProfil(); showToast("Annonce retirée."); })
+        .catch(function(){ showToast("Suppression impossible."); });
+      return;
+    }
+    if (e.target.closest("#btnSupprCompte")) {
+      if (!window.confirm("Supprimer ton compte, tes annonces, ton solde et tes déblocages ? C'est définitif.")) return;
+      // la photo vit dans le stockage, pas dans la base : elle s'efface par son propre canal
+      supprimerMaPhoto()
+        .then(function(){ return rpc("supprimer_mon_compte", {}); })
+        .then(function(){
+          clearSession(); majCompte(); updateJetonChip(); closeAll();
+          return loadAnnonces();
+        })
+        .then(function(){ showToast("Compte supprimé. Tout a été effacé."); })
+        .catch(function(){ showToast("Suppression impossible, réessaie."); });
+    }
+  });
+
+  $("#profilSheet").addEventListener("change", function(e){
+    var input = e.target.closest("#inputPhoto");
+    if (!input || !input.files || !input.files[0]) return;
+    var file = input.files[0];
+    if (file.size > 2 * 1024 * 1024 * 4) { showToast("Photo trop lourde."); return; }
+    envoyerPhoto(file);
+  });
+
+  $("#profilSheet").addEventListener("submit", function(e){
+    var f = e.target.closest("#profilForm"); if (!f) return;
+    e.preventDefault();
+    rpc("upsert_profil", {
+      p_display_name: (f.display_name.value || "").trim(),
+      p_nationalite: (f.nationalite.value || "").trim() || null,
+      p_phone: (f.phone.value || "").trim() || null
+    })
+      .then(chargerMonProfil)
+      .then(function(){ dessinerProfil(); render(); showToast("Profil enregistré."); })
+      .catch(function(){ showToast("Enregistrement impossible."); });
+  });
   $("#infoBtn").addEventListener("click", function(){ openOverlay("#howOverlay"); });
 
   $("#postForm").addEventListener("submit", function(e){
@@ -7681,41 +8175,53 @@
     var fromCode = resolveAirport(f.from.value), toCode = resolveAirport(f.to.value);
     if (!fromCode || !toCode) { showToast("Choisis un aéroport dans la liste (ville ou code)"); return; }
     if (fromCode === toCode) { showToast("Départ et arrivée identiques"); return; }
-    var row = {
-      kind: postKind,
-      name: f.name.value.trim() || "Toi",
-      from_code: fromCode, to_code: toCode,
-      date: f.date.value,
-      kg: parseInt(f.kg.value, 10) || 1,
-      price: postKind === "trajet" ? (parseInt(f.price.value, 10) || 12) : null,
-      content: postKind === "demande" ? (f.content.value.trim() || "Colis") : null,
-      rating: 5, trips: 0, verified: false,
-      phone: "+32 470 00 00 00", email: "toi@mail.be"
+    var tel = (f.phone.value || "").trim();
+    if (tel.replace(/[^0-9]/g, "").length < 8) { showToast("Numéro de téléphone incomplet"); return; }
+    var args = {
+      p_kind: postKind,
+      p_from: fromCode, p_to: toCode,
+      p_date: f.date.value,
+      p_kg: parseInt(f.kg.value, 10) || 1,
+      p_price: postKind === "trajet" ? (parseInt(f.price.value, 10) || 12) : null,
+      p_content: postKind === "demande" ? ((f.content.value || "").trim() || "Colis") : null,
+      p_phone: tel
     };
-    row.id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ("u" + Date.now());
     var submitBtn = document.getElementById("postSubmit");
     if (submitBtn) submitBtn.disabled = true;
-    fetch(SUPA_REST + "/annonces", {
-      method: "POST",
-      headers: supaAuthHeaders({ "Content-Type": "application/json", "Prefer": "return=minimal" }),
-      body: JSON.stringify(row)
-    })
-    .then(function(res){ if (!res.ok) return Promise.reject(res.status); })
+    // le serveur pose lui-meme le proprietaire, le nom du profil et l'email du compte
+    rpc("publier_annonce", args)
     .then(function(){
-      mine[row.id] = true; save(LS_MINE, mine);
       state.seg = postKind === "trajet" ? "trajets" : "demandes";
       state.from = ""; state.to = "";
       var sf = $("#searchFrom"), st = $("#searchTo"), sb = document.querySelector(".searchbar");
       if (sf) sf.value = ""; if (st) st.value = ""; if (sb) sb.classList.remove("has-value");
       [].forEach.call($("#seg").querySelectorAll("button"), function(x){ x.classList.toggle("active", x.dataset.seg===state.seg); });
-      f.reset(); fillAirports();
+      f.reset(); fillAirports(); remplirTelephone();
       closeOverlay("#postOverlay");
       showToast(postKind === "trajet" ? "Trajet publié ! Il est en ligne." : "Demande publiée ! Elle est en ligne.");
       loadAnnonces();
     })
-    .catch(function(){ showToast("Publication impossible, réessaie."); })
+    .catch(function(err){
+      var msg = (err && err.message) || "";
+      if (msg.indexOf("compte requis") >= 0 || msg.indexOf("profil requis") >= 0) {
+        closeOverlay("#postOverlay");
+        exigeCompte(function(){ openOverlay("#postOverlay"); });
+      } else if (msg.indexOf("limite de 5") >= 0) {
+        showToast("Tu as atteint 5 annonces pour aujourd'hui.");
+      } else if (msg.indexOf("date invalide") >= 0) {
+        showToast("Choisis une date à venir.");
+      } else {
+        showToast("Publication impossible, réessaie.");
+      }
+    })
     .then(function(){ if (submitBtn) submitBtn.disabled = false; });
   });
+
+  // Le telephone du profil pre-remplit le formulaire, on ne le retape pas a chaque fois.
+  function remplirTelephone() {
+    var champ = document.querySelector('#postForm [name="phone"]');
+    if (champ && monProfil && monProfil.phone && !champ.value) champ.value = monProfil.phone;
+  }
 
   // ---- Overlay helpers ----
   function openOverlay(sel) { $(sel).classList.add("open"); document.body.style.overflow = "hidden"; }
@@ -7733,8 +8239,10 @@
   }
 
   updateJetonChip();
+  majCompte();
   render();
-  authInit().then(function(){ loadBalance(); loadAnnonces(); }).catch(function(){ loadAnnonces(); });
+  loadAnnonces();
+  authInit().then(function(){ majCompte(); updateJetonChip(); render(); });
 })();
 </script>
 
