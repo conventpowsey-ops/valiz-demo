@@ -7163,7 +7163,29 @@
   function load(k, def) { try { var v = JSON.parse(localStorage.getItem(k)); return v || def; } catch(e){ return def; } }
   function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
 
-  var items = SEED.concat(load(LS_ITEMS, []));
+  // --- Base de données partagée (Supabase) ---
+  var SUPA_URL = "https://dqnuacagqldvcrnapgbu.supabase.co";
+  var SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxbnVhY2FncWxkdmNybmFwZ2J1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5MTI4NDIsImV4cCI6MjEwMDQ4ODg0Mn0.QPkO_u3ZkCfBJ4tJQsS0vgDr0uRfKYMNNxmk_1Q2Ejs";
+  var SUPA_REST = SUPA_URL + "/rest/v1";
+  function supaHeaders(extra) {
+    var h = { "apikey": SUPA_KEY, "Authorization": "Bearer " + SUPA_KEY };
+    if (extra) { for (var k in extra) h[k] = extra[k]; }
+    return h;
+  }
+  function mapRow(r) {
+    return { id: r.id, kind: r.kind, name: r.name, from: r.from_code, to: r.to_code,
+      date: r.date, kg: r.kg, price: r.price, content: r.content,
+      rating: Number(r.rating), trips: r.trips, verified: r.verified, phone: r.phone, email: r.email };
+  }
+  function loadAnnonces() {
+    return fetch(SUPA_REST + "/annonces?select=*", { headers: supaHeaders() })
+      .then(function(res){ return res.ok ? res.json() : Promise.reject(res.status); })
+      .then(function(rows){ if (rows && rows.length) items = rows.map(mapRow); loading = false; render(); })
+      .catch(function(){ loading = false; render(); });
+  }
+
+  var loading = true;
+  var items = SEED.slice();
   var unlocked = load(LS_UNLOCK, {});
   var mine = load(LS_MINE, {});
   var _bRaw = localStorage.getItem(LS_BALANCE);
@@ -7355,7 +7377,9 @@
       var hasSearch = state.from || state.to;
       listEl.innerHTML = hasSearch
         ? noResultsHTML()
-        : '<div class="empty"><div class="em">&#9992;</div><p>Rien ici pour le moment.<br>Publie le premier avec le bouton en bas.</p></div>';
+        : (loading
+            ? '<div class="empty"><div class="em">&#9992;</div><p>Chargement des trajets...</p></div>'
+            : '<div class="empty"><div class="em">&#9992;</div><p>Rien ici pour le moment.<br>Publie le premier avec le bouton en bas.</p></div>');
       return;
     }
     listEl.innerHTML = list.map(passHTML).join("");
@@ -7603,28 +7627,41 @@
     var fromCode = resolveAirport(f.from.value), toCode = resolveAirport(f.to.value);
     if (!fromCode || !toCode) { showToast("Choisis un aéroport dans la liste (ville ou code)"); return; }
     if (fromCode === toCode) { showToast("Départ et arrivée identiques"); return; }
-    var item = {
-      id: "u" + Date.now(),
+    var row = {
       kind: postKind,
       name: f.name.value.trim() || "Toi",
-      from: fromCode, to: toCode,
+      from_code: fromCode, to_code: toCode,
       date: f.date.value,
-      kg: parseInt(f.kg.value,10) || 1,
-      rating: 5.0, trips: 0, verified: false,
+      kg: parseInt(f.kg.value, 10) || 1,
+      price: postKind === "trajet" ? (parseInt(f.price.value, 10) || 12) : null,
+      content: postKind === "demande" ? (f.content.value.trim() || "Colis") : null,
+      rating: 5, trips: 0, verified: false,
       phone: "+32 470 00 00 00", email: "toi@mail.be"
     };
-    if (postKind === "trajet") item.price = parseInt(f.price.value,10) || 12;
-    else item.content = f.content.value.trim() || "Colis";
-    items.push(item);
-    save(LS_ITEMS, load(LS_ITEMS, []).concat([item]));
-    mine[item.id] = true; save(LS_MINE, mine);
-    state.seg = postKind === "trajet" ? "trajets" : "demandes";
-    state.filter = "ALL";
-    [].forEach.call($("#seg").querySelectorAll("button"), function(x){ x.classList.toggle("active", x.dataset.seg===state.seg); });
-    f.reset(); fillAirports();
-    closeOverlay("#postOverlay");
-    showToast(postKind === "trajet" ? "Trajet publié ! Il est en ligne." : "Demande publiée ! Elle est en ligne.");
-    render();
+    var submitBtn = document.getElementById("postSubmit");
+    if (submitBtn) submitBtn.disabled = true;
+    fetch(SUPA_REST + "/annonces", {
+      method: "POST",
+      headers: supaHeaders({ "Content-Type": "application/json", "Prefer": "return=representation" }),
+      body: JSON.stringify(row)
+    })
+    .then(function(res){ return res.ok ? res.json() : Promise.reject(res.status); })
+    .then(function(created){
+      var it = mapRow(created[0]);
+      items.push(it);
+      mine[it.id] = true; save(LS_MINE, mine);
+      state.seg = postKind === "trajet" ? "trajets" : "demandes";
+      state.from = ""; state.to = "";
+      var sf = $("#searchFrom"), st = $("#searchTo"), sb = document.querySelector(".searchbar");
+      if (sf) sf.value = ""; if (st) st.value = ""; if (sb) sb.classList.remove("has-value");
+      [].forEach.call($("#seg").querySelectorAll("button"), function(x){ x.classList.toggle("active", x.dataset.seg===state.seg); });
+      f.reset(); fillAirports();
+      closeOverlay("#postOverlay");
+      showToast(postKind === "trajet" ? "Trajet publié ! Il est en ligne." : "Demande publiée ! Elle est en ligne.");
+      render();
+    })
+    .catch(function(){ showToast("Publication impossible, réessaie."); })
+    .then(function(){ if (submitBtn) submitBtn.disabled = false; });
   });
 
   // ---- Overlay helpers ----
@@ -7644,6 +7681,7 @@
 
   updateJetonChip();
   render();
+  loadAnnonces();
 })();
 </script>
 
