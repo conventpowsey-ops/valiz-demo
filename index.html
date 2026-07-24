@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#F5F2EA">
 <title>Valiz</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Valiz">
+<meta name="mobile-web-app-capable" content="yes">
 </head>
 <body>
 <title>Valiz</title>
@@ -401,6 +408,32 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .disclaimer { font-size: 10.5px; color: var(--ink-soft); text-align: center; padding: 4px 24px 0; line-height: 1.5; }
+
+  .how-link {
+    border: 0; background: transparent; color: var(--blue); font-family: inherit;
+    font-size: 12.5px; font-weight: 700; cursor: pointer; padding: 0; text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .how-steps { list-style: none; margin: 6px 0 4px; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+  .how-steps li { display: flex; gap: 13px; align-items: flex-start; font-size: 14px; line-height: 1.5; }
+  .how-steps b { color: var(--ink); }
+  .how-num {
+    flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--blue); color: #fff; font-weight: 800; font-size: 13px; margin-top: 1px;
+  }
+  .how-trust { font-size: 12.5px; color: var(--ink-soft); background: var(--gold-soft); border-radius: 10px; padding: 11px 13px; margin: 18px 0; }
+  .mine-tag {
+    font-size: 10px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700;
+    padding: 3px 7px; border-radius: 6px; background: var(--blue); color: #fff;
+  }
+  .self-note {
+    text-align: center; border: 1.5px dashed var(--line-strong); border-radius: 16px;
+    padding: 20px 18px; color: var(--ink-soft); font-size: 13px;
+  }
+  .self-note b { color: var(--ink); }
+
+  :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
+  .pass:focus-visible { outline-offset: 3px; }
 </style>
 
 <div class="airmail"></div>
@@ -413,7 +446,7 @@
       </div>
       <button class="jetons" id="jetonChip" title="Ton solde de jetons"></button>
     </div>
-    <p class="tagline">Le trajet de l'un, le colis de l'autre.</p>
+    <p class="tagline">Le trajet de l'un, le colis de l'autre. <button type="button" class="how-link" id="infoBtn">Comment ça marche ?</button></p>
     <div class="segmented" id="seg">
       <button data-seg="trajets" class="active">Voyageurs <span class="cnt" id="cntT"></span></button>
       <button data-seg="demandes">Expéditeurs <span class="cnt" id="cntD"></span></button>
@@ -486,6 +519,22 @@
 <!-- PAY sheet -->
 <div class="overlay" id="payOverlay">
   <div class="sheet" id="paySheet"></div>
+</div>
+
+<!-- HOW sheet -->
+<div class="overlay" id="howOverlay">
+  <div class="sheet">
+    <div class="grabber"></div>
+    <h2>Comment ça marche</h2>
+    <p class="sub">Faire voyager un colis, simplement.</p>
+    <ol class="how-steps">
+      <li><span class="how-num">1</span><div><b>Trouve ton trajet.</b> Cherche un voyageur qui part vers ta destination, ou publie ta demande d'envoi.</div></li>
+      <li><span class="how-num">2</span><div><b>Débloque le contact.</b> Un jeton révèle le nom et les coordonnées, pour organiser l'envoi ensemble.</div></li>
+      <li><span class="how-num">3</span><div><b>Des jetons pour ça.</b> Tu en reçois 3 à l'inscription, tu en gagnes en réalisant des transports, et tu peux en acheter.</div></li>
+    </ol>
+    <p class="how-trust">Les identités sont vérifiées et notées. Valiz met en relation, en toute confiance.</p>
+    <button type="button" class="btn-primary" data-close>Compris</button>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -3806,7 +3855,7 @@
     { id:"d4", kind:"demande", name:"Didier M.", from:"BRU", to:"FIH", date:"2026-08-22", kg:2, content:"Documents et un petit colis", rating:4.7, trips:7, verified:true, phone:"+32 479 62 10 35", email:"d.mukendi@mail.be" }
   ];
 
-  var LS_ITEMS = "valiz_items_v2", LS_UNLOCK = "valiz_unlocked_v2", LS_BALANCE = "valiz_balance_v2";
+  var LS_ITEMS = "valiz_items_v2", LS_UNLOCK = "valiz_unlocked_v2", LS_BALANCE = "valiz_balance_v2", LS_MINE = "valiz_mine_v2";
   var TOKEN = { signup: 3, deliveredReward: 2, unlockCost: 1 };
   var PACKS = [ { t: 5, e: 5 }, { t: 12, e: 10 }, { t: 25, e: 18 } ];
   var pendingUnlockId = null;
@@ -3815,6 +3864,7 @@
 
   var items = SEED.concat(load(LS_ITEMS, []));
   var unlocked = load(LS_UNLOCK, {});
+  var mine = load(LS_MINE, {});
   var _bRaw = localStorage.getItem(LS_BALANCE);
   var balance = _bRaw === null ? TOKEN.signup : parseInt(_bRaw, 10);
   if (isNaN(balance)) balance = TOKEN.signup;
@@ -3852,13 +3902,15 @@
     var crossTxt = "";
     if (isTrajet && cross > 0) crossTxt = '<div class="cross-hint">&#128231; '+cross+' '+(cross>1?"personnes cherchent":"personne cherche")+' à envoyer vers '+AIRPORTS[i.to]+'</div>';
     var isUnlocked = !!unlocked[i.id];
-    var nameShown = isUnlocked ? i.name : anonName(i);
+    var isMine = !!mine[i.id];
+    var revealed = isUnlocked || isMine;
+    var nameShown = revealed ? i.name : anonName(i);
     return ''
-      + '<article class="pass" data-id="'+i.id+'">'
+      + '<article class="pass" data-id="'+i.id+'" tabindex="0" role="button">'
       +   '<div class="pass-top">'
       +     '<div class="pass-head">'
       +       '<div class="who">'
-      +         (isUnlocked
+      +         (revealed
                     ? '<div class="avatar" style="background:'+avatarColor(i.name)+'">'+initials(i.name)+'</div>'
                     : '<div class="avatar masked">'+LOCK_SVG+'</div>')
       +         '<div class="who-txt">'
@@ -3866,7 +3918,7 @@
       +           '<div class="who-meta"><span class="stars">&#9733; '+i.rating.toFixed(1)+'</span> · '+i.trips+' trajets</div>'
       +         '</div>'
       +       '</div>'
-      +       '<span class="kind-tag '+(isTrajet?"kind-trajet":"kind-demande")+'">'+(isTrajet?"Voyage":"Cherche")+'</span>'
+      +       (isMine ? '<span class="mine-tag">Toi</span>' : '<span class="kind-tag '+(isTrajet?"kind-trajet":"kind-demande")+'">'+(isTrajet?"Voyage":"Cherche")+'</span>')
       +     '</div>'
       +     '<div class="route">'
       +       '<div class="endpoint"><div class="code mono">'+i.from+'</div><div class="city">'+AIRPORTS[i.from]+'</div></div>'
@@ -3883,7 +3935,7 @@
       +       '<div class="fact"><div class="lbl">'+(isTrajet?"Kg dispo":"Kg à envoyer")+'</div><div class="val mono">'+i.kg+'<span class="u"> kg</span></div></div>'
       +       (isTrajet ? '<div class="fact"><div class="lbl">Prix</div><div class="val mono">'+i.price+'<span class="u"> €/kg</span></div></div>' : '')
       +     '</div>'
-      +     '<button class="cta-mini '+(isUnlocked?"done":"")+'">'+(isUnlocked?"✓ Débloqué":"Contact")+'</button>'
+      +     '<button class="cta-mini '+(revealed?"done":"")+'">'+(isMine?"Ton annonce":(isUnlocked?"✓ Débloqué":"Contact"))+'</button>'
       +   '</div>'
       + '</article>';
   }
@@ -3930,17 +3982,24 @@
     var card = e.target.closest(".pass"); if (!card) return;
     openDetail(card.dataset.id);
   });
+  listEl.addEventListener("keydown", function(e){
+    if (e.key !== "Enter" && e.key !== " ") return;
+    var card = e.target.closest(".pass"); if (!card) return;
+    e.preventDefault(); openDetail(card.dataset.id);
+  });
 
   // ---- Detail ----
   function openDetail(id) {
     var i = items.filter(function(x){return x.id===id;})[0]; if (!i) return;
     var isTrajet = i.kind === "trajet";
     var isUnlocked = !!unlocked[i.id];
-    var nameShown = isUnlocked ? i.name : anonName(i);
+    var isMine = !!mine[i.id];
+    var revealed = isUnlocked || isMine;
+    var nameShown = revealed ? i.name : anonName(i);
     var html = ''
       + '<div class="grabber"></div>'
       + '<div class="trust-row">'
-      +   (isUnlocked
+      +   (revealed
              ? '<div class="avatar" style="background:'+avatarColor(i.name)+';width:42px;height:42px;font-size:16px">'+initials(i.name)+'</div>'
              : '<div class="avatar masked" style="width:42px;height:42px">'+LOCK_SVG+'</div>')
       +   '<div><div class="who-name" style="font-size:16px">'+esc(nameShown)+(i.verified?' <span class="verif">&#10003;</span>':'')+'</div>'
@@ -3964,7 +4023,9 @@
       +   (!isTrajet && i.content ? '<div class="demand-note" style="padding:14px 0 0">« '+esc(i.content)+' »</div>' : '')
       + '</div>';
 
-    if (isUnlocked) {
+    if (isMine) {
+      html += '<div class="self-note">&#128100; <b>C\'est ton annonce.</b><br>Les autres la voient et peuvent débloquer ton contact pour te joindre.</div>';
+    } else if (isUnlocked) {
       html += contactHTML(i);
     } else {
       html += ''
@@ -4121,6 +4182,7 @@
 
   $("#fab").addEventListener("click", function(){ openOverlay("#postOverlay"); });
   $("#jetonChip").addEventListener("click", function(){ openBuy(null); });
+  $("#infoBtn").addEventListener("click", function(){ openOverlay("#howOverlay"); });
 
   $("#postForm").addEventListener("submit", function(e){
     e.preventDefault();
@@ -4142,6 +4204,7 @@
     else item.content = f.content.value.trim() || "Colis";
     items.push(item);
     save(LS_ITEMS, load(LS_ITEMS, []).concat([item]));
+    mine[item.id] = true; save(LS_MINE, mine);
     state.seg = postKind === "trajet" ? "trajets" : "demandes";
     state.filter = "ALL";
     [].forEach.call($("#seg").querySelectorAll("button"), function(x){ x.classList.toggle("active", x.dataset.seg===state.seg); });
@@ -4158,6 +4221,7 @@
   [].forEach.call(document.querySelectorAll(".overlay"), function(o){
     o.addEventListener("click", function(e){ if (e.target === o) closeAll(); });
   });
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape") closeAll(); });
 
   var toastT;
   function showToast(msg) {
