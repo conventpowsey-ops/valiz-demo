@@ -7157,7 +7157,7 @@
   ];
 
   var LS_ITEMS = "valiz_items_v2", LS_UNLOCK = "valiz_unlocked_v2", LS_BALANCE = "valiz_balance_v2", LS_MINE = "valiz_mine_v2";
-  var TOKEN = { signup: 3, deliveredReward: 2, unlockCost: 1 };
+  var TOKEN = { signup: 3, deliveredReward: 1, unlockCost: 1 };
   var PACKS = [ { t: 5, e: 5 }, { t: 12, e: 10 }, { t: 25, e: 18 } ];
   var pendingUnlockId = null;
   function load(k, def) { try { var v = JSON.parse(localStorage.getItem(k)); return v || def; } catch(e){ return def; } }
@@ -7538,7 +7538,7 @@
       + '<h2>Recharge tes jetons</h2>'
       + '<p class="sub">'+sub+'</p>'
       + '<div class="packs">'+packsHTML+'</div>'
-      + '<p class="earn-note">Tu gagnes aussi <b>'+TOKEN.deliveredReward+' jetons</b> à chaque transport livré et confirmé. Publier une annonce ne rapporte rien, donc pas de fausses offres pour farmer.</p>'
+      + '<p class="earn-note">Tu gagnes aussi <b>'+TOKEN.deliveredReward+' '+(TOKEN.deliveredReward===1?"jeton":"jetons")+'</b> à chaque transport livré et confirmé. Publier une annonce ne rapporte rien, donc pas de fausses offres pour farmer.</p>'
       + '<div class="fake-card"><div class="cc"></div><div class="num">•••• •••• •••• 4242 <small>· 08/28</small></div></div>'
       + '<button type="button" class="btn-ghost" data-close>Plus tard</button>'
       + '<p class="pay-note">Paiement fictif · aucune carte n\'est débitée</p>';
