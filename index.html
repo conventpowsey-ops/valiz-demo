@@ -7178,26 +7178,55 @@
       rating: Number(r.rating), trips: r.trips, verified: r.verified, phone: r.phone, email: r.email };
   }
   function loadAnnonces() {
-    return fetch(SUPA_REST + "/annonces?select=*", { headers: supaHeaders() })
+    return fetch(SUPA_REST + "/annonces_public?select=*", { headers: supaHeaders() })
       .then(function(res){ return res.ok ? res.json() : Promise.reject(res.status); })
       .then(function(rows){ if (rows && rows.length) items = rows.map(mapRow); loading = false; render(); })
       .catch(function(){ loading = false; render(); });
+  }
+
+  // --- Authentification anonyme (identité serveur pour solde et déblocage) ---
+  var LS_SESSION = "valiz_session_v1";
+  var userToken = null;
+  function supaAuthHeaders(extra) {
+    var h = { "apikey": SUPA_KEY, "Authorization": "Bearer " + (userToken || SUPA_KEY) };
+    if (extra) { for (var k in extra) h[k] = extra[k]; }
+    return h;
+  }
+  function saveSession(s) {
+    if (!s || !s.access_token) return Promise.reject("no session");
+    userToken = s.access_token;
+    try { localStorage.setItem(LS_SESSION, JSON.stringify({ refresh_token: s.refresh_token })); } catch (e) {}
+    return s;
+  }
+  function signUpAnon() {
+    return fetch(SUPA_URL + "/auth/v1/signup", { method: "POST", headers: { "apikey": SUPA_KEY, "Content-Type": "application/json" }, body: "{}" })
+      .then(function(r){ return r.json(); }).then(saveSession);
+  }
+  function authInit() {
+    var saved = null; try { saved = JSON.parse(localStorage.getItem(LS_SESSION)); } catch (e) {}
+    if (saved && saved.refresh_token) {
+      return fetch(SUPA_URL + "/auth/v1/token?grant_type=refresh_token", { method: "POST", headers: { "apikey": SUPA_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ refresh_token: saved.refresh_token }) })
+        .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+        .then(saveSession)
+        .catch(function(){ return signUpAnon(); });
+    }
+    return signUpAnon();
+  }
+  function loadBalance() {
+    return fetch(SUPA_REST + "/balances?select=jetons", { headers: supaAuthHeaders() })
+      .then(function(r){ return r.ok ? r.json() : []; })
+      .then(function(rows){ balance = (rows && rows.length) ? rows[0].jetons : TOKEN.signup; updateJetonChip(); })
+      .catch(function(){});
   }
 
   var loading = true;
   var items = SEED.slice();
   var unlocked = load(LS_UNLOCK, {});
   var mine = load(LS_MINE, {});
-  var _bRaw = localStorage.getItem(LS_BALANCE);
-  var balance = _bRaw === null ? TOKEN.signup : parseInt(_bRaw, 10);
-  if (isNaN(balance)) balance = TOKEN.signup;
+  var balance = TOKEN.signup;
   var state = { seg: "trajets", from: "", to: "" };
 
-  function setBalance(n) {
-    balance = n;
-    try { localStorage.setItem(LS_BALANCE, String(n)); } catch (e) {}
-    updateJetonChip();
-  }
+  function setBalance(n) { balance = n; updateJetonChip(); }
   function updateJetonChip() {
     var c = document.getElementById("jetonChip"); if (!c) return;
     c.innerHTML = '<span class="coin"></span><b>' + balance + '</b> ' + (balance === 1 ? "jeton" : "jetons");
@@ -7467,7 +7496,7 @@
     if (isMine) {
       html += '<div class="self-note">&#128100; <b>C\'est ton annonce.</b><br>Les autres la voient et peuvent débloquer ton contact pour te joindre.</div>';
     } else if (isUnlocked) {
-      html += contactHTML(i);
+      html += contactHTML(unlocked[i.id]);
     } else {
       html += ''
         + '<div class="locked-box">'
@@ -7483,14 +7512,15 @@
     openOverlay("#detailOverlay");
   }
 
-  function contactHTML(i) {
-    var wa = i.phone.replace(/[^0-9]/g,"");
+  function contactHTML(c) {
+    c = c || {};
+    var wa = (c.phone || "").replace(/[^0-9]/g,"");
     return ''
       + '<div class="contact-card">'
       +   '<div class="contact-head">&#10003; Contact débloqué</div>'
       +   '<div class="contact-body">'
-      +     '<div class="c-line"><span class="lbl">Téléphone</span><span class="v mono">'+i.phone+'</span></div>'
-      +     '<div class="c-line"><span class="lbl">Email</span><span class="v" style="font-size:13px">'+i.email+'</span></div>'
+      +     '<div class="c-line"><span class="lbl">Téléphone</span><span class="v mono">'+esc(c.phone || "")+'</span></div>'
+      +     '<div class="c-line"><span class="lbl">Email</span><span class="v" style="font-size:13px">'+esc(c.email || "")+'</span></div>'
       +     '<a class="wa-btn" href="https://wa.me/'+wa+'" target="_blank" rel="noopener">Contacter sur WhatsApp</a>'
       +   '</div>'
       + '</div>';
@@ -7535,14 +7565,26 @@
   }
 
   function doSpend(id) {
-    setBalance(balance - TOKEN.unlockCost);
-    unlocked[id] = true; save(LS_UNLOCK, unlocked);
-    $("#paySheet").innerHTML = successHTML("Contact débloqué !", "Tu peux maintenant contacter directement. Solde : "+balance+" "+(balance===1?"jeton":"jetons")+".");
-    setTimeout(function(){
+    $("#paySheet").innerHTML = successHTML("Déblocage...", "Un instant.");
+    fetch(SUPA_REST + "/rpc/reveal_contact", {
+      method: "POST",
+      headers: supaAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ p_annonce: id })
+    })
+    .then(function(r){ if (!r.ok) return r.json().then(function(e){ return Promise.reject(e); }); return r.json(); })
+    .then(function(rows){
+      var c = rows[0] || {};
+      unlocked[id] = { phone: c.phone, email: c.email }; save(LS_UNLOCK, unlocked);
+      $("#paySheet").innerHTML = successHTML("Contact débloqué !", "Tu peux maintenant contacter directement.");
+      loadBalance();
+      setTimeout(function(){ closeOverlay("#payOverlay"); openDetail(id); render(); }, 950);
+    })
+    .catch(function(err){
       closeOverlay("#payOverlay");
-      openDetail(id);
-      render();
-    }, 950);
+      var msg = (err && err.message) || "";
+      if (msg.indexOf("insuffisant") >= 0) { openBuy(id); }
+      else { showToast("Déblocage impossible, réessaie."); }
+    });
   }
 
   function openBuy(returnId) {
@@ -7571,13 +7613,20 @@
 
   function doBuy(idx) {
     var p = PACKS[idx]; if (!p) return;
-    setBalance(balance + p.t);
-    var rid = pendingUnlockId; pendingUnlockId = null;
-    $("#paySheet").innerHTML = successHTML("+"+p.t+" jetons", "Nouveau solde : "+balance+" jetons.");
-    setTimeout(function(){
-      closeOverlay("#payOverlay");
-      if (rid) openSpend(rid); else render();
-    }, 900);
+    $("#paySheet").innerHTML = successHTML("Paiement...", "Un instant.");
+    fetch(SUPA_REST + "/rpc/add_jetons", {
+      method: "POST",
+      headers: supaAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ p_n: p.t })
+    })
+    .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+    .then(function(newBal){
+      if (typeof newBal === "number") { balance = newBal; updateJetonChip(); } else { loadBalance(); }
+      var rid = pendingUnlockId; pendingUnlockId = null;
+      $("#paySheet").innerHTML = successHTML("+"+p.t+" jetons", "Nouveau solde : "+balance+" jetons.");
+      setTimeout(function(){ closeOverlay("#payOverlay"); if (rid) openSpend(rid); else render(); }, 900);
+    })
+    .catch(function(){ showToast("Achat impossible, réessaie."); });
   }
 
   // ---- Post form ----
@@ -7638,18 +7687,17 @@
       rating: 5, trips: 0, verified: false,
       phone: "+32 470 00 00 00", email: "toi@mail.be"
     };
+    row.id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ("u" + Date.now());
     var submitBtn = document.getElementById("postSubmit");
     if (submitBtn) submitBtn.disabled = true;
     fetch(SUPA_REST + "/annonces", {
       method: "POST",
-      headers: supaHeaders({ "Content-Type": "application/json", "Prefer": "return=representation" }),
+      headers: supaAuthHeaders({ "Content-Type": "application/json", "Prefer": "return=minimal" }),
       body: JSON.stringify(row)
     })
-    .then(function(res){ return res.ok ? res.json() : Promise.reject(res.status); })
-    .then(function(created){
-      var it = mapRow(created[0]);
-      items.push(it);
-      mine[it.id] = true; save(LS_MINE, mine);
+    .then(function(res){ if (!res.ok) return Promise.reject(res.status); })
+    .then(function(){
+      mine[row.id] = true; save(LS_MINE, mine);
       state.seg = postKind === "trajet" ? "trajets" : "demandes";
       state.from = ""; state.to = "";
       var sf = $("#searchFrom"), st = $("#searchTo"), sb = document.querySelector(".searchbar");
@@ -7658,7 +7706,7 @@
       f.reset(); fillAirports();
       closeOverlay("#postOverlay");
       showToast(postKind === "trajet" ? "Trajet publié ! Il est en ligne." : "Demande publiée ! Elle est en ligne.");
-      render();
+      loadAnnonces();
     })
     .catch(function(){ showToast("Publication impossible, réessaie."); })
     .then(function(){ if (submitBtn) submitBtn.disabled = false; });
@@ -7681,7 +7729,7 @@
 
   updateJetonChip();
   render();
-  loadAnnonces();
+  authInit().then(function(){ loadBalance(); loadAnnonces(); }).catch(function(){ loadAnnonces(); });
 })();
 </script>
 
