@@ -174,19 +174,25 @@
     box-shadow: 0 1px 2px rgba(0,0,0,.12);
   }
 
-  .filters {
-    display: flex; gap: 7px; overflow-x: auto; padding: 12px 18px 12px;
-    scrollbar-width: none; -webkit-overflow-scrolling: touch;
-    border-bottom: 1px solid var(--line);
+  .searchbar {
+    display: flex; align-items: center; gap: 9px; margin: 12px 0 2px;
+    background: var(--card); border: 1px solid var(--line-strong);
+    border-radius: 12px; padding: 0 12px; height: 44px;
+    transition: border-color .15s, box-shadow .15s;
   }
-  .filters::-webkit-scrollbar { display: none; }
-  .chip {
-    flex: 0 0 auto; border: 1px solid var(--line-strong); background: var(--card);
-    color: var(--ink-soft); border-radius: 999px; padding: 6px 12px;
-    font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap;
-    transition: all .16s; font-family: inherit;
+  .searchbar:focus-within { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(28,86,160,.12); }
+  .searchbar svg { width: 18px; height: 18px; color: var(--ink-soft); flex: 0 0 auto; }
+  .searchbar input {
+    flex: 1; border: 0; background: transparent; color: var(--ink);
+    font-size: 15px; font-family: inherit; outline: none; min-width: 0;
+    -webkit-appearance: none;
   }
-  .chip.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .searchbar input::-webkit-search-cancel-button { display: none; }
+  .searchbar #searchClear {
+    border: 0; background: transparent; color: var(--ink-soft); cursor: pointer;
+    font-size: 15px; padding: 4px; line-height: 1; display: none; font-family: inherit;
+  }
+  .searchbar.has-value #searchClear { display: block; }
 
   main.list {
     flex: 1; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 14px;
@@ -409,12 +415,15 @@
     </div>
     <p class="tagline">Le trajet de l'un, le colis de l'autre.</p>
     <div class="segmented" id="seg">
-      <button data-seg="trajets" class="active">Trajets <span class="cnt" id="cntT"></span></button>
-      <button data-seg="demandes">Demandes <span class="cnt" id="cntD"></span></button>
+      <button data-seg="trajets" class="active">Voyageurs <span class="cnt" id="cntT"></span></button>
+      <button data-seg="demandes">Expéditeurs <span class="cnt" id="cntD"></span></button>
     </div>
-    <div style="height:12px"></div>
+    <div class="searchbar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input id="search" type="search" placeholder="Rechercher une destination (Dakar, Dubaï...)" autocomplete="off" autocorrect="off" spellcheck="false">
+      <button type="button" id="searchClear" aria-label="Effacer">&#10005;</button>
+    </div>
   </header>
-  <div class="filters" id="filters"></div>
   <main class="list" id="list"></main>
   <button class="fab" id="fab">＋ Publier</button>
 </div>
@@ -554,7 +563,7 @@
   var _bRaw = localStorage.getItem(LS_BALANCE);
   var balance = _bRaw === null ? TOKEN.signup : parseInt(_bRaw, 10);
   if (isNaN(balance)) balance = TOKEN.signup;
-  var state = { seg: "trajets", filter: "ALL" };
+  var state = { seg: "trajets", query: "" };
 
   function setBalance(n) {
     balance = n;
@@ -567,27 +576,19 @@
   }
 
   var $ = function (s) { return document.querySelector(s); };
-  var listEl = $("#list"), filtersEl = $("#filters");
+  var listEl = $("#list");
 
-  function destinationsFor(kind) {
-    var set = {};
-    items.filter(function(i){return i.kind===kind;}).forEach(function(i){ set[i.to] = true; });
-    return Object.keys(set);
+  function norm(s) { return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); }
+  function matchesQuery(i, q) {
+    if (!q) return true;
+    var hay = norm(AIRPORTS[i.to] + " " + AIRPORTS[i.from] + " " + i.to + " " + i.from + " " + (i.content || ""));
+    return hay.indexOf(q) !== -1;
   }
 
   function crossCount(item) {
     // how many of the opposite kind want the same destination
     var opp = item.kind === "trajet" ? "demande" : "trajet";
     return items.filter(function(i){ return i.kind===opp && i.to===item.to; }).length;
-  }
-
-  function renderFilters() {
-    var dests = destinationsFor(state.seg === "trajets" ? "trajet" : "demande");
-    var html = '<button class="chip ' + (state.filter==="ALL"?"active":"") + '" data-f="ALL">Toutes destinations</button>';
-    dests.forEach(function(code){
-      html += '<button class="chip ' + (state.filter===code?"active":"") + '" data-f="'+code+'">'+AIRPORTS[code]+'</button>';
-    });
-    filtersEl.innerHTML = html;
   }
 
   function passHTML(i) {
@@ -635,12 +636,15 @@
   function render() {
     $("#cntT").textContent = items.filter(function(i){return i.kind==="trajet";}).length;
     $("#cntD").textContent = items.filter(function(i){return i.kind==="demande";}).length;
-    renderFilters();
     var kind = state.seg === "trajets" ? "trajet" : "demande";
-    var list = items.filter(function(i){ return i.kind===kind && (state.filter==="ALL" || i.to===state.filter); });
+    var q = norm(state.query);
+    var list = items.filter(function(i){ return i.kind===kind && matchesQuery(i, q); });
     list.sort(function(a,b){ return a.date < b.date ? -1 : 1; });
     if (!list.length) {
-      listEl.innerHTML = '<div class="empty"><div class="em">&#9992;</div><p>Aucun '+(kind==="trajet"?"trajet":"demande")+' ici pour le moment.<br>Publie le premier avec le bouton en bas.</p></div>';
+      var msg = state.query
+        ? 'Aucun résultat pour « '+esc(state.query)+' ».<br>Essaie une autre destination.'
+        : 'Rien ici pour le moment.<br>Publie le premier avec le bouton en bas.';
+      listEl.innerHTML = '<div class="empty"><div class="em">&#9992;</div><p>'+msg+'</p></div>';
       return;
     }
     listEl.innerHTML = list.map(passHTML).join("");
@@ -649,13 +653,21 @@
   // Segments
   $("#seg").addEventListener("click", function(e){
     var b = e.target.closest("button"); if (!b) return;
-    state.seg = b.dataset.seg; state.filter = "ALL";
+    state.seg = b.dataset.seg;
     [].forEach.call(this.querySelectorAll("button"), function(x){ x.classList.toggle("active", x===b); });
     render();
   });
-  filtersEl.addEventListener("click", function(e){
-    var b = e.target.closest(".chip"); if (!b) return;
-    state.filter = b.dataset.f; render();
+
+  var searchInput = $("#search"), searchbarEl = document.querySelector(".searchbar");
+  searchInput.addEventListener("input", function(){
+    state.query = this.value.trim();
+    searchbarEl.classList.toggle("has-value", this.value.length > 0);
+    render();
+  });
+  $("#searchClear").addEventListener("click", function(){
+    searchInput.value = ""; state.query = "";
+    searchbarEl.classList.remove("has-value");
+    searchInput.focus(); render();
   });
 
   // Card open
