@@ -494,6 +494,12 @@
 
   function anonName(i) { return (i.kind === "trajet" ? "Voyageur" : "Expéditeur") + (i.verified ? " vérifié" : ""); }
 
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
   function avatarColor(name) {
     var s = 0; for (var i=0;i<name.length;i++) s += name.charCodeAt(i);
     return AV_COLORS[s % AV_COLORS.length];
@@ -584,7 +590,7 @@
                     ? '<div class="avatar" style="background:'+avatarColor(i.name)+'">'+initials(i.name)+'</div>'
                     : '<div class="avatar masked">'+LOCK_SVG+'</div>')
       +         '<div class="who-txt">'
-      +           '<div class="who-name">'+nameShown+(i.verified?'<span class="verif" title="Identité vérifiée">&#10003;</span>':'')+'</div>'
+      +           '<div class="who-name">'+esc(nameShown)+(i.verified?'<span class="verif" title="Identité vérifiée">&#10003;</span>':'')+'</div>'
       +           '<div class="who-meta"><span class="stars">&#9733; '+i.rating.toFixed(1)+'</span> · '+i.trips+' trajets</div>'
       +         '</div>'
       +       '</div>'
@@ -596,7 +602,7 @@
       +       '<div class="endpoint arr"><div class="code mono">'+i.to+'</div><div class="city">'+AIRPORTS[i.to]+'</div></div>'
       +     '</div>'
       +   '</div>'
-      +   (!isTrajet && i.content ? '<div class="demand-note">« '+i.content+' »</div>' : '')
+      +   (!isTrajet && i.content ? '<div class="demand-note">« '+esc(i.content)+' »</div>' : '')
       +   crossTxt
       +   '<div class="pass-perf"></div>'
       +   '<div class="pass-bottom">'
@@ -654,7 +660,7 @@
       +   (isUnlocked
              ? '<div class="avatar" style="background:'+avatarColor(i.name)+';width:42px;height:42px;font-size:16px">'+initials(i.name)+'</div>'
              : '<div class="avatar masked" style="width:42px;height:42px">'+LOCK_SVG+'</div>')
-      +   '<div><div class="who-name" style="font-size:16px">'+nameShown+(i.verified?' <span class="verif">&#10003;</span>':'')+'</div>'
+      +   '<div><div class="who-name" style="font-size:16px">'+esc(nameShown)+(i.verified?' <span class="verif">&#10003;</span>':'')+'</div>'
       +   '<div class="who-meta"><span class="stars">&#9733; '+i.rating.toFixed(1)+'</span> · '+i.trips+' trajets réalisés</div></div>'
       + '</div>'
       + '<div class="trust-row">'
@@ -672,7 +678,7 @@
       +     '<div class="d-fact"><div class="lbl">'+(isTrajet?"Kg dispo":"Kg à envoyer")+'</div><div class="val mono">'+i.kg+' kg</div></div>'
       +     (isTrajet ? '<div class="d-fact"><div class="lbl">Prix</div><div class="val mono">'+i.price+' €/kg</div></div>' : '')
       +   '</div>'
-      +   (!isTrajet && i.content ? '<div class="demand-note" style="padding:14px 0 0">« '+i.content+' »</div>' : '')
+      +   (!isTrajet && i.content ? '<div class="demand-note" style="padding:14px 0 0">« '+esc(i.content)+' »</div>' : '')
       + '</div>';
 
     if (isUnlocked) {
