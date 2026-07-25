@@ -677,9 +677,9 @@
     <p class="sub" id="postSub">Indique tes kilos libres, quelqu'un les remplira.</p>
     <form id="postForm">
       <div class="field">
-        <label>Ton numéro de téléphone</label>
+        <label>Le numéro WhatsApp pour ce trajet</label>
         <input name="phone" required placeholder="+32 470 12 34 56" autocomplete="tel" inputmode="tel">
-        <p class="auth-why" style="margin:6px 0 0">Visible uniquement par la personne qui débloque ton annonce avec un jeton.</p>
+        <p class="auth-why" style="margin:6px 0 0">Celui de ton compte est déjà rempli. Change-le si tu voyages avec un autre numéro. Visible uniquement par la personne qui débloque ton annonce.</p>
       </div>
       <div class="row2">
         <div class="field">
@@ -817,6 +817,11 @@
       <div class="field" id="authNameField">
         <label>Ton prénom</label>
         <input name="display_name" placeholder="Aline" autocomplete="given-name">
+      </div>
+      <div class="field" id="authPhoneField">
+        <label>Ton numéro WhatsApp</label>
+        <input name="phone" placeholder="+32 470 12 34 56" autocomplete="tel" inputmode="tel">
+        <p class="auth-why" style="margin:6px 0 0">C'est par là que les gens te joindront. Il n'est visible qu'après un déblocage, et tu pourras en mettre un autre pour un trajet précis.</p>
       </div>
       <div class="field">
         <label>Email</label>
@@ -7600,7 +7605,7 @@
     return corps;
   }
 
-  function creerCompte(email, motdepasse, prenom) {
+  function creerCompte(email, motdepasse, prenom, telephone) {
     return fetch(SUPA_URL + "/auth/v1/signup", {
       method: "POST",
       headers: { "apikey": SUPA_KEY, "Content-Type": "application/json" },
@@ -7612,7 +7617,11 @@
         }
         return saveSession(j);
       })
-      .then(function(){ return rpc("upsert_profil", { p_display_name: prenom }); })
+      .then(function(){
+        var args = { p_display_name: prenom };
+        if (telephone) args.p_phone = telephone;
+        return rpc("upsert_profil", args);
+      })
       .then(function(){ return rpc("reclamer_bonus", {}); })
       .then(function(solde){ if (typeof solde === "number") setBalance(solde); })
       .then(chargerMonProfil);
@@ -8208,6 +8217,7 @@
       ? "Ton compte garde ton solde et tes annonces, même si tu changes de téléphone. Ton email n'est jamais affiché aux autres."
       : "Ton email n'est jamais affiché aux autres utilisateurs.";
     $("#authNameField").style.display = estInscription ? "block" : "none";
+    $("#authPhoneField").style.display = estInscription ? "block" : "none";
     var nom = document.querySelector('#authForm [name="display_name"]');
     if (nom) nom.required = estInscription;
     $("#authSubmit").textContent = estInscription ? "Créer mon compte" : "Me connecter";
@@ -8232,11 +8242,13 @@
     var email = (f.email.value || "").trim();
     var pwd = f.password.value || "";
     var nom = (f.display_name.value || "").trim();
+    var tel = (f.phone.value || "").trim();
     var btn = $("#authSubmit");
     if (authMode === "signup" && nom.length < 2) { showToast("Ton prénom, pour que les autres sachent à qui ils parlent"); return; }
+    if (authMode === "signup" && tel.replace(/[^0-9]/g, "").length < 8) { showToast("Ton numéro WhatsApp, c'est par là qu'on te joindra"); return; }
     if (authMode === "signup" && pwd.length < 10) { showToast("Mot de passe : 10 caractères minimum"); return; }
     btn.disabled = true;
-    var travail = authMode === "signup" ? creerCompte(email, pwd, nom) : seConnecter(email, pwd);
+    var travail = authMode === "signup" ? creerCompte(email, pwd, nom, tel) : seConnecter(email, pwd);
     travail
       .then(function(){
         f.reset();
@@ -8820,7 +8832,7 @@
       var msg = (err && err.message) || "";
       if (msg.indexOf("compte requis") >= 0 || msg.indexOf("profil requis") >= 0) {
         closeOverlay("#postOverlay");
-        exigeCompte(function(){ openOverlay("#postOverlay"); });
+        exigeCompte(function(){ remplirTelephone(); openOverlay("#postOverlay"); });
       } else if (msg.indexOf("limite de 5") >= 0) {
         showToast("Tu as atteint 5 annonces pour aujourd'hui.");
       } else if (msg.indexOf("date invalide") >= 0) {
