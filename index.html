@@ -677,6 +677,35 @@
   .avis-envoi { width:100%; margin-top:8px; padding:11px 12px; }
   .tr-btn[disabled] { opacity:.45; cursor:default; }
   .avis-attente { font-size:12px; color:var(--ink-soft); margin-top:7px; line-height:1.45; }
+  /* Fiche publique d'une personne : ce qu'on peut savoir d'elle avant de
+     depenser un jeton pour la contacter. */
+  .fp-head { display:flex; gap:14px; align-items:center; margin:4px 0 16px; }
+  .fp-ava {
+    width:62px; height:62px; border-radius:50%; flex:0 0 62px; color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-size:23px; font-weight:800; background-size:cover; background-position:center;
+  }
+  .fp-nom { font-size:20px; font-weight:800; line-height:1.2; }
+  .fp-meta { font-size:13px; color:var(--ink-soft); margin-top:3px; }
+  .fp-chiffres { display:flex; gap:9px; margin-bottom:18px; }
+  .fp-case {
+    flex:1; background:var(--sunken); border-radius:12px; padding:11px 8px; text-align:center;
+  }
+  .fp-case b { display:block; font-size:17px; font-weight:800; }
+  .fp-case span { font-size:10.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.04em; }
+  .fp-titre {
+    font-size:11px; font-weight:700; color:var(--ink-soft);
+    text-transform:uppercase; letter-spacing:.05em; margin:0 0 9px;
+  }
+  .fp-avis { padding:11px 0; border-bottom:1px solid var(--line); }
+  .fp-avis:last-child { border-bottom:0; }
+  .fp-avis-top { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .fp-avis-qui { font-size:13.5px; font-weight:700; }
+  .fp-avis-date { font-size:11.5px; color:var(--ink-soft); flex:0 0 auto; }
+  .fp-avis-txt { font-size:13.5px; line-height:1.5; margin-top:5px; }
+  .fp-avis-cache { font-size:12.5px; color:var(--ink-soft); margin-top:5px; font-style:italic; }
+  .fp-vide { font-size:13.5px; color:var(--ink-soft); }
+  .who[data-fiche] { cursor:pointer; }
   .notif-item {
     display:flex; gap:10px; padding:11px 0; border-bottom:1px solid var(--line);
   }
@@ -866,6 +895,14 @@
 </div>
 
 <!-- COLIS sheet : declaration du contenu et regles, a chaque transport -->
+<div class="overlay" id="userOverlay">
+  <div class="sheet">
+    <div class="grabber"></div>
+    <div id="userSheet"></div>
+    <button type="button" class="btn-ghost" data-close style="width:100%;margin-top:18px">Fermer</button>
+  </div>
+</div>
+
 <div class="overlay" id="colisOverlay">
   <div class="sheet">
     <div class="grabber"></div>
@@ -7970,7 +8007,7 @@
       + '<article class="pass" data-id="'+i.id+'" tabindex="0" role="button">'
       +   '<div class="pass-top">'
       +     '<div class="pass-head">'
-      +       '<div class="who">'
+      +       '<div class="who"' + (i.userId ? ' data-fiche="' + i.userId + '"' : '') + '>'
       +         (revealed
                     ? '<div class="avatar" style="background:'+avatarColor(i.name)+'">'+initials(i.name)+'</div>'
                     : '<div class="avatar masked">'+LOCK_SVG+'</div>')
@@ -8075,6 +8112,10 @@
       searchbarEl.classList.add("has-value");
       render(); return;
     }
+    // Le bloc identite ouvre la fiche de la personne, pas le detail de
+    // l'annonce. Il est teste AVANT .pass, sinon le clic remonterait a la carte.
+    var qui = e.target.closest(".who[data-fiche]");
+    if (qui) { ouvrirFichePublique(qui.dataset.fiche); return; }
     var card = e.target.closest(".pass"); if (!card) return;
     openDetail(card.dataset.id);
   });
@@ -8506,6 +8547,81 @@
     demande: "En attente", accepte: "En cours", livre: "Remis",
     refuse: "Refusé", annule: "Annulé"
   };
+
+  // Fiche publique d'une personne : ce qu'on peut savoir d'elle AVANT de
+  // depenser un jeton pour la contacter. Elle n'affiche que ce que la vue
+  // profils_public expose, jamais un telephone ni un email. Le contact se
+  // debloque avec un jeton, c'est la seule source de revenu de l'app, et une
+  // fiche qui donnerait le numero la contournerait entierement.
+  function ficheAvisHTML(a) {
+    var etoiles = "";
+    for (var n = 1; n <= 5; n++) {
+      etoiles += '<span style="color:' + (n <= a.note ? "var(--gold)" : "var(--line-strong)")
+        + '">&#9733;</span>';
+    }
+    var corps = "";
+    if (a.commentaire) corps = '<div class="fp-avis-txt">« ' + esc(a.commentaire) + ' »</div>';
+    else if (!a.revele) corps = '<div class="fp-avis-cache">Commentaire caché tant que '
+      + 'les deux avis ne sont pas déposés.</div>';
+    return '<div class="fp-avis">'
+      + '<div class="fp-avis-top">'
+      +   '<div class="fp-avis-qui">' + esc(a.auteur_prenom || "Quelqu'un") + ' ' + etoiles + '</div>'
+      +   '<div class="fp-avis-date">' + fmtDate(String(a.created_at).slice(0, 10)) + '</div>'
+      + '</div>' + corps + '</div>';
+  }
+
+  function ouvrirFichePublique(uid) {
+    if (!uid) return;
+    $("#userSheet").innerHTML = '<p class="sub" style="margin:20px 0">Un instant.</p>';
+    openOverlay("#userOverlay");
+    var lire = function (chemin) {
+      return fetch(SUPA_REST + chemin, { headers: supaHeaders() }).then(jsonOuErreur);
+    };
+    Promise.all([
+      lire("/profils_public?user_id=eq." + encodeURIComponent(uid) + "&select=*"),
+      lire("/avis_public?cible_id=eq." + encodeURIComponent(uid)
+           + "&select=*&order=created_at.desc")
+    ]).then(function (res) {
+      var p = (res[0] || [])[0];
+      var avis = res[1] || [];
+      if (!p) {
+        $("#userSheet").innerHTML = '<p class="sub" style="margin:20px 0">Profil introuvable.</p>';
+        return;
+      }
+      var nom = p.display_name || "Quelqu'un";
+      var prenom = String(nom).split(" ")[0];
+      var ava = p.photo_url
+        ? '<div class="fp-ava" style="background-image:url(\'' + esc(p.photo_url) + '\')"></div>'
+        : '<div class="fp-ava" style="background:' + avatarColor(nom) + '">' + initials(nom) + '</div>';
+      var depuis = "";
+      try {
+        depuis = new Date(p.created_at).toLocaleDateString("fr-BE", { month: "long", year: "numeric" });
+      } catch (e) {}
+      var note = (p.rating === null || p.rating === undefined)
+        ? "Nouveau" : Number(p.rating).toFixed(1);
+      $("#userSheet").innerHTML = ''
+        + '<div class="fp-head">' + ava + '<div>'
+        +   '<div class="fp-nom">' + esc(prenom)
+        +     (p.phone_verified ? '<span class="verif" title="Numéro vérifié">&#10003;</span>' : '')
+        +   '</div>'
+        +   '<div class="fp-meta">' + (p.nationalite ? esc(p.nationalite) + ' · ' : '')
+        +     (depuis ? 'membre depuis ' + depuis : '') + '</div>'
+        + '</div></div>'
+        + '<div class="fp-chiffres">'
+        +   '<div class="fp-case"><b>' + note + '</b><span>Note</span></div>'
+        +   '<div class="fp-case"><b>' + (p.trips || 0) + '</b><span>Trajets</span></div>'
+        +   '<div class="fp-case"><b>' + avis.length + '</b><span>Avis</span></div>'
+        + '</div>'
+        + '<p class="fp-titre">Ce qu\'on dit de ' + esc(prenom) + '</p>'
+        + (avis.length
+             ? avis.map(ficheAvisHTML).join("")
+             : '<p class="fp-vide">Pas encore d\'avis. Un avis n\'arrive qu\'après une remise '
+               + 'confirmée par code, donc personne ne peut s\'en inventer.</p>');
+    }).catch(function () {
+      $("#userSheet").innerHTML = '<p class="sub" style="margin:20px 0">Impossible de charger '
+        + 'ce profil pour le moment.</p>';
+    });
+  }
 
   // Un avis non reciproque se revele tout seul 14 jours apres la livraison
   // confirmee. Le serveur fait foi, ce calcul ne sert qu'a annoncer la date.
@@ -9162,7 +9278,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-25-2056";
+  var VALIZ_VERSION = "2026-07-25-2117";
   function verifierVersion() {
     if (VALIZ_VERSION === "0") return;   // pas encore estampille, on ne derange pas
     fetch("version.json", { cache: "no-store" })
