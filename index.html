@@ -589,6 +589,13 @@
     border-radius:50%; background:#fff; transition:transform .18s;
   }
   .switch.on::after { transform:translateX(19px); }
+  .role-box {
+    margin-top:16px; padding:14px; border:1px solid var(--line-strong);
+    border-radius:12px; background:var(--sunken); font-size:13px; line-height:1.5;
+  }
+  .role-box p { margin:8px 0 6px; color:var(--ink-soft); }
+  .role-box ul { margin:0; padding-left:18px; color:var(--ink-soft); }
+  .role-box li { margin-bottom:5px; }
   .me-dot {
     display:inline-flex; align-items:center; justify-content:center; min-width:17px; height:17px;
     padding:0 4px; border-radius:999px; background:var(--red); color:#fff;
@@ -695,11 +702,22 @@
     <ol class="how-steps">
       <li><span class="how-num">1</span><div><b>Trouve ton trajet.</b> Cherche un voyageur sur ton itinéraire, ville de départ et ville d'arrivée, ou publie ta demande d'envoi.</div></li>
       <li><span class="how-num">2</span><div><b>Débloque le contact.</b> Un jeton révèle le nom et les coordonnées, pour organiser l'envoi ensemble.</div></li>
-      <li><span class="how-num">3</span><div><b>Le colis voyage.</b> Tu demandes le transport, le voyageur accepte, et tu reçois un code à 4 chiffres. Tu ne le donnes qu'au moment où il te remet le colis à l'arrivée.</div></li>
-      <li><span class="how-num">4</span><div><b>Le code prouve la livraison.</b> Le voyageur le tape dans l'app : ça confirme la remise, vous vous notez, et il gagne 1 jeton. Sans code, pas de note et pas de récompense, donc pas de faux transports.</div></li>
-      <li><span class="how-num">5</span><div><b>Comment obtenir des jetons.</b> Tu en reçois 3 en créant ton compte, tu en gagnes 1 à chaque transport livré, et tu peux en acheter.</div></li>
+      <li><span class="how-num">3</span><div><b>Vous vous organisez, entre vous.</b> Le colis, la date, le prix, l'emballage : tout ça se décide directement entre vous deux. Valiz n'intervient pas dans votre accord.</div></li>
+      <li><span class="how-num">4</span><div><b>Un code pour confirmer la remise.</b> Quand le voyageur accepte, tu reçois un code à 4 chiffres. Tu ne le donnes qu'au moment où il te remet le colis. En le saisissant, il confirme que la remise a eu lieu : c'est ce qui ouvre la notation et lui fait gagner 1 jeton. Sans code, pas de note, donc pas de faux avis.</div></li>
+      <li><span class="how-num">5</span><div><b>Comment obtenir des jetons.</b> Tu en reçois 3 en créant ton compte, tu en gagnes 1 à chaque remise confirmée, et tu peux en acheter.</div></li>
     </ol>
     <p class="how-trust">Tu peux tout parcourir sans compte. Le compte n'est demandé qu'au moment de publier ou de débloquer un contact, pour que chacun sache à qui il parle.</p>
+    <div class="role-box">
+      <b>Ce que Valiz fait, et ne fait pas.</b>
+      <p>Valiz met en relation des voyageurs et des expéditeurs, rien de plus. Concrètement :</p>
+      <ul>
+        <li>Valiz <b>ne transporte pas</b> et ne prend en charge aucun colis.</li>
+        <li>Valiz <b>ne fixe aucun prix</b> de transport et n'encaisse pas votre accord. Les jetons ne paient que la mise en relation.</li>
+        <li>Valiz <b>n'est pas partie</b> à l'accord passé entre vous et <b>ne garantit ni la livraison, ni le contenu, ni l'état du colis</b>.</li>
+        <li>Le code confirme seulement que vous vous êtes rencontrés. Valiz enregistre votre confirmation, sans en être témoin.</li>
+        <li>Chacun reste responsable de ce qu'il transporte ou envoie, et des règles de douane de son pays. Un voyageur peut et doit refuser un colis qu'il n'a pas pu inspecter.</li>
+      </ul>
+    </div>
     <button type="button" class="btn-primary" data-close>Compris</button>
   </div>
 </div>
@@ -7791,7 +7809,7 @@
         if (!tr) {
           html += '<button class="btn-primary" style="margin-top:12px" data-demander="' + i.id + '">'
             + 'Demander ce transport</button>'
-            + '<p class="tr-code-hint">Le voyageur accepte, puis tape ton code à 4 chiffres à la remise du colis.</p>';
+            + '<p class="tr-code-hint">Vous convenez ensemble du colis, du prix et de la date. Valiz garde seulement la trace de votre accord et te donne un code à remettre à l\'arrivée.</p>';
         } else {
           html += '<div class="self-note">Transport ' + LIBELLE_STATUT[tr.statut].toLowerCase()
             + '. Suis-le depuis ton profil.</div>';
@@ -7818,7 +7836,8 @@
     html += '<p class="disclaimer">' + (i.isDemo
         ? 'Annonce de démonstration, contact fictif.'
         : 'Beta. Les paiements de jetons ne sont pas encore réels.')
-      + ' Le transport de colis reste soumis aux règles douanières.</p>';
+      + ' Valiz met en relation : elle ne transporte pas, ne fixe pas le prix du transport et n\'est pas partie à votre accord. '
+      + 'Chacun reste responsable de ce qu\'il envoie ou transporte, et des règles de douane.</p>';
     $("#detailSheet").innerHTML = html;
     openOverlay("#detailOverlay");
   }
@@ -8131,8 +8150,9 @@
     return null;
   }
 
+  // Valiz n'atteste rien : ce sont les deux personnes qui se confirment la remise.
   var LIBELLE_STATUT = {
-    demande: "En attente", accepte: "En cours", livre: "Livré",
+    demande: "En attente", accepte: "En cours", livre: "Remis",
     refuse: "Refusé", annule: "Annulé"
   };
 
@@ -8158,10 +8178,10 @@
       html += '<div class="tr-sub" style="margin-top:8px">En attente de la réponse du voyageur.</div>';
     } else if (t.statut === "accepte" && jeSuisVoyageur) {
       html += '<div class="tr-actions"><button class="tr-btn main" data-valider="' + t.id + '">'
-        + 'Saisir le code de livraison</button></div>';
+        + 'Saisir son code de remise</button></div>';
     } else if (t.statut === "accepte") {
       html += '<div class="tr-actions"><button class="tr-btn main" data-code="' + t.id + '">'
-        + 'Voir mon code de livraison</button></div>';
+        + 'Voir mon code de remise</button></div>';
     }
 
     if (aNoter) {
@@ -8170,7 +8190,7 @@
       for (var n = 1; n <= 5; n++) html += '<button class="star-btn" data-note="' + n + '">&#9733;</button>';
       html += '</div>';
     } else if (t.statut === "livre") {
-      html += '<div class="tr-sub" style="margin-top:8px">&#10003; Livraison confirmée, note donnée.</div>';
+      html += '<div class="tr-sub" style="margin-top:8px">&#10003; Remise confirmée entre vous, note donnée.</div>';
     }
     return html + '</div>';
   }
@@ -8303,7 +8323,7 @@
       + '<div class="sect-title">Passées</div>'
       + (passees.length ? '<ul class="mini-list">' + passees.map(ligne).join("") + '</ul>'
                         : '<p class="prof-meta">Rien pour le moment.</p>')
-      + '<p class="prof-meta" style="margin-top:16px">Un transport se règle en trois temps : tu demandes, le voyageur accepte, et il tape ton code à 4 chiffres au moment de te remettre le colis. C\'est ce code qui déclenche la note et le jeton gagné.</p>'
+      + '<p class="prof-meta" style="margin-top:16px">Un transport se règle en trois temps : tu demandes, le voyageur accepte, et il saisit ton code à 4 chiffres au moment de te remettre le colis. Ce code confirme seulement que la remise a eu lieu entre vous, et ouvre la notation. Le colis, le prix et la date se décident directement entre vous : Valiz n\'y prend pas part.</p>'
       + '<button type="button" class="btn-ghost" id="btnDeconnexion" style="margin-top:14px">Me déconnecter</button>'
       + '<button type="button" class="btn-ghost" data-close>Fermer</button>'
       + '<button type="button" class="danger-link" id="btnSupprCompte">Supprimer mon compte et mes données</button>';
@@ -8343,10 +8363,10 @@
   function afficherCode(code) {
     $("#paySheet").innerHTML = ''
       + '<div class="grabber"></div>'
-      + '<h2>Ton code de livraison</h2>'
-      + '<p class="sub">Donne-le au voyageur seulement au moment où il te remet le colis. C\'est ce qui prouve la livraison et déclenche la note.</p>'
+      + '<h2>Ton code de remise</h2>'
+      + '<p class="sub">Donne-le au voyageur seulement au moment où il te remet le colis. En le saisissant, il confirme que vous vous êtes bien vus, ce qui ouvre la notation.</p>'
       + '<div class="tr-code">' + esc(code) + '</div>'
-      + '<p class="tr-code-hint">Ne le communique pas à l\'avance.</p>'
+      + '<p class="tr-code-hint">Ne le communique pas à l\'avance. Valiz enregistre votre confirmation, sans être témoin de l\'échange.</p>'
       + '<button type="button" class="btn-ghost" data-close>Fermer</button>';
     openOverlay("#payOverlay");
   }
@@ -8354,10 +8374,10 @@
   function ouvrirSaisieCode(idTransport) {
     $("#paySheet").innerHTML = ''
       + '<div class="grabber"></div>'
-      + '<h2>Valider la livraison</h2>'
-      + '<p class="sub">Demande son code à 4 chiffres à la personne qui reçoit le colis, au moment de la remise.</p>'
+      + '<h2>Confirmer la remise</h2>'
+      + '<p class="sub">Demande son code à 4 chiffres à la personne qui reçoit le colis, au moment où tu le lui remets.</p>'
       + '<input class="code-input" id="champCode" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off">'
-      + '<button class="btn-primary" style="margin-top:12px" id="btnValiderCode" data-tr="' + idTransport + '">Valider la livraison</button>'
+      + '<button class="btn-primary" style="margin-top:12px" id="btnValiderCode" data-tr="' + idTransport + '">Confirmer la remise</button>'
       + '<p class="tr-code-hint">5 essais maximum, ensuite il faudra repasser par l\'expéditeur.</p>'
       + '<button type="button" class="btn-ghost" data-close>Annuler</button>';
     openOverlay("#payOverlay");
@@ -8378,7 +8398,7 @@
           .then(loadBalance)
           .then(loadAnnonces)
           .then(function(){
-            $("#paySheet").innerHTML = successHTML("Livraison confirmée !", "Tu gagnes 1 jeton. Vous pouvez maintenant vous noter.");
+            $("#paySheet").innerHTML = successHTML("Remise confirmée !", "Tu gagnes 1 jeton. Vous pouvez maintenant vous noter.");
             setTimeout(function(){ closeOverlay("#payOverlay"); dessinerProfil(); openOverlay("#profilOverlay"); }, 1400);
           });
       })
