@@ -583,6 +583,33 @@
     font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer;
   }
   .btn-danger:active { background: var(--red); color: #fff; }
+  /* L'oeil se pose DANS le champ. Cible tactile de 44px comme le reste de
+     l'app, et le champ reserve la place a droite pour que le texte saisi ne
+     passe jamais sous l'icone. */
+  /* Bandeau de mise a jour : discret mais au-dessus de tout, y compris des
+     feuilles (z-index 50) et de l'entete collante (20). */
+  .bandeau-maj {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    background: var(--blue); color: #fff; padding: 10px 14px;
+    font-size: 14px; font-weight: 600;
+    padding-top: calc(10px + env(safe-area-inset-top));
+  }
+  .bandeau-maj[hidden] { display: none; }
+  .bandeau-maj button {
+    border: 0; background: #fff; color: var(--blue); font: inherit; font-weight: 800;
+    border-radius: 9px; padding: 0 14px; min-height: 36px; cursor: pointer;
+  }
+  .champ-mdp { position: relative; }
+  .champ-mdp input { padding-right: 52px; }
+  .oeil-mdp {
+    position: absolute; top: 50%; right: 2px; transform: translateY(-50%);
+    width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+    border: 0; background: transparent; color: var(--ink-soft); cursor: pointer; padding: 0;
+    border-radius: 10px;
+  }
+  .oeil-mdp svg { width: 21px; height: 21px; display: block; }
+  .oeil-mdp:active { color: var(--blue); }
   .danger-link { display:block; width:100%; margin-top:16px; background:none; border:0; color:var(--red); font:inherit; font-size:13px; text-decoration:underline; cursor:pointer; }
   .pic-row { display:flex; align-items:center; gap:12px; margin-bottom:6px; }
   .pic-btn {
@@ -682,6 +709,10 @@
 </style>
 
 <div class="airmail"></div>
+<div id="bandeauMaj" class="bandeau-maj" role="status" hidden>
+  <span>Nouvelle version disponible.</span>
+  <button type="button" id="btnRecharger">Recharger</button>
+</div>
 <div class="app">
   <header class="topbar">
     <div class="brand-row">
@@ -881,7 +912,16 @@
       </div>
       <div class="field">
         <label>Mot de passe</label>
-        <input name="password" type="password" required minlength="10" placeholder="10 caractères minimum" autocomplete="current-password">
+        <div class="champ-mdp">
+          <input name="password" type="password" required minlength="10" placeholder="10 caractères minimum" autocomplete="current-password">
+          <button type="button" class="oeil-mdp" id="voirMdp" aria-label="Afficher le mot de passe" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M1.8 12S5.4 5.4 12 5.4 22.2 12 22.2 12 18.6 18.6 12 18.6 1.8 12 1.8 12z"/>
+              <circle cx="12" cy="12" r="3.1"/>
+              <path class="oeil-barre" d="M3.2 3.2l17.6 17.6" style="display:none"/>
+            </svg>
+          </button>
+        </div>
       </div>
       <div id="captchaBox" style="margin-top:12px"></div>
       <button type="submit" class="btn-primary" id="authSubmit">Créer mon compte</button>
@@ -8955,6 +8995,23 @@
       .catch(function(){ showToast("Suppression impossible."); });
   });
 
+  // Reveler sa saisie : sur telephone, taper 10 caracteres a l'aveugle est la
+  // premiere cause d'echec de connexion. On bascule le type du champ et on
+  // barre l'icone pour signaler l'etat courant.
+  document.addEventListener("click", function(e){
+    var bouton = e.target.closest("#voirMdp");
+    if (!bouton) return;
+    var champ = bouton.parentNode.querySelector("input");
+    if (!champ) return;
+    var estVisible = champ.type === "text";
+    champ.type = estVisible ? "password" : "text";
+    bouton.setAttribute("aria-pressed", estVisible ? "false" : "true");
+    bouton.setAttribute("aria-label", estVisible ? "Afficher le mot de passe" : "Masquer le mot de passe");
+    var barre = bouton.querySelector(".oeil-barre");
+    if (barre) barre.style.display = estVisible ? "none" : "";
+    champ.focus();
+  });
+
   function openOverlay(sel) { $(sel).classList.add("open"); document.body.style.overflow = "hidden"; }
   function closeOverlay(sel) { $(sel).classList.remove("open"); document.body.style.overflow = ""; }
   function closeAll() { [].forEach.call(document.querySelectorAll(".overlay"), function(o){ o.classList.remove("open"); }); document.body.style.overflow = ""; }
@@ -8974,11 +9031,38 @@
   // chargement et on ne voit jamais les nouvelles publications. On recharge
   // donc quand l'app revient au premier plan, avec un garde-fou de 5 secondes
   // pour ne pas marteler le serveur si l'ecran clignote.
+  // ---- Detection de nouvelle version ------------------------------------
+  // L'app est un index.html unique servi avec cache-control: max-age=600 et
+  // sans service worker : une fois posee sur l'ecran d'accueil, rien ne lui dit
+  // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
+  // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
+  // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
+  var VALIZ_VERSION = "2026-07-25-1931";
+  function verifierVersion() {
+    if (VALIZ_VERSION === "0") return;   // pas encore estampille, on ne derange pas
+    fetch("version.json", { cache: "no-store" })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        if (j && j.version && j.version !== VALIZ_VERSION) {
+          var el = document.getElementById("bandeauMaj");
+          if (el) el.hidden = false;
+        }
+      })
+      .catch(function(){});
+  }
+  document.addEventListener("click", function(e){
+    if (!e.target.closest("#btnRecharger")) return;
+    // on repart de l'URL sans parametre ajoute, en forcant le contournement du cache
+    var u = location.href.split("#")[0].split("?")[0];
+    location.replace(u + "?maj=" + Date.now());
+  });
+
   var dernierChargement = 0;
   function rafraichir(force) {
     var maintenant = Date.now();
     if (!force && maintenant - dernierChargement < 5000) return;
     dernierChargement = maintenant;
+    verifierVersion();
     loadAnnonces();
     if (me) { chargerTransports(); chargerNotifications(); }
   }
@@ -8991,6 +9075,7 @@
   majCompte();
   render();
   dernierChargement = Date.now();
+  verifierVersion();
   loadAnnonces();
   recupererSessionExterne()
     .then(function(){
