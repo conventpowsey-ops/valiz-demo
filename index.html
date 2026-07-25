@@ -413,6 +413,11 @@
     padding: 15px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; margin-top: 6px;
   }
   .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+  /* Le bouton Enregistrer du profil reste gris tant que rien n'a change, et
+     redevient bleu des la premiere modification reelle. On compare a l'etat
+     initial du formulaire, pas a un simple "a-t-il ete touche" : revenir a la
+     valeur de depart doit re-desactiver le bouton. */
+  #btnEnregistrerProfil:disabled { opacity: .4; }
   .val.serv { font-size: 13px; font-weight: 700; color: var(--green); letter-spacing: -.01em; }
   .btn-google {
     width: 100%; background: var(--card); color: var(--ink); border: 1px solid var(--line-strong);
@@ -7905,6 +7910,9 @@
     inp.value = it[0] + " · " + it[1];
     hideAc();
     if (pick) pick(it[0]);
+    // le champ vient d'etre rempli par programme, sans evenement input : on
+    // reevalue l'etat du bouton Enregistrer du profil s'il est a l'ecran
+    if (profilSuivreModifs) profilSuivreModifs();
     inp.focus();
   }
   function hlAc() { [].forEach.call(acList.children, function(ch, i){ ch.classList.toggle("ac-active", i === acIndex); }); }
@@ -8478,6 +8486,10 @@
   }
 
   // Valiz n'atteste rien : ce sont les deux personnes qui se confirment la remise.
+  // rappel pose par le formulaire de profil, pour que le choix d'un aeroport
+  // dans la liste de suggestions reevalue l'etat du bouton Enregistrer
+  var profilSuivreModifs = null;
+
   var LIBELLE_STATUT = {
     demande: "En attente", accepte: "En cours", livre: "Remis",
     refuse: "Refusé", annule: "Annulé"
@@ -8682,7 +8694,7 @@
       +       '<input name="ligne_to" placeholder="Ville ou code" autocomplete="off" value="'
       +         (p.ligne_to ? esc(p.ligne_to + " · " + (AIRPORTS[p.ligne_to] || "")) : "") + '"></div>'
       +   '</div>'
-      +   '<button type="submit" class="btn-primary">Enregistrer</button>'
+      +   '<button type="submit" class="btn-primary" id="btnEnregistrerProfil" disabled>Enregistrer</button>'
       + '</form>'
       + '<div class="switch-row">'
       +   '<div class="switch-txt">Me prévenir par email'
@@ -8708,6 +8720,29 @@
       + '<button type="button" class="btn-ghost" id="btnDeconnexion" style="margin-top:14px">Me déconnecter</button>'
       + '<button type="button" class="btn-ghost" data-close>Fermer</button>'
       + '<button type="button" class="danger-link" id="btnSupprCompte">Supprimer mon compte et mes données</button>';
+
+    // Le bouton Enregistrer suit l'etat reel du formulaire. On memorise
+    // l'empreinte des valeurs au moment de l'ouverture, et on la recompare a
+    // chaque frappe : si James revient a ce qu'il y avait, le bouton se
+    // re-desactive. Un simple drapeau "touche" ne saurait pas faire ca.
+    (function(){
+      var f = document.getElementById("profilForm");
+      var bouton = document.getElementById("btnEnregistrerProfil");
+      if (!f || !bouton) return;
+      var empreinte = function(){
+        return [].map.call(f.elements, function(el){
+          return el.name ? el.name + "=" + el.value : "";
+        }).join("|");
+      };
+      var depart = empreinte();
+      var suivre = function(){ bouton.disabled = (empreinte() === depart); };
+      f.addEventListener("input", suivre);
+      f.addEventListener("change", suivre);
+      // le selecteur d'aeroports remplit le champ par programme, sans evenement
+      // input : on repasse donc aussi apres chaque choix dans la liste.
+      f.addEventListener("blur", suivre, true);
+      profilSuivreModifs = suivre;
+    })();
 
     // les champs de la ligne habituelle profitent du meme selecteur d'aeroports
     var lf = document.querySelector('#profilForm [name="ligne_from"]');
@@ -9041,7 +9076,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-25-1937";
+  var VALIZ_VERSION = "2026-07-25-1944";
   function verifierVersion() {
     if (VALIZ_VERSION === "0") return;   // pas encore estampille, on ne derange pas
     fetch("version.json", { cache: "no-store" })
