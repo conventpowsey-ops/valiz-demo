@@ -435,7 +435,8 @@
   .auth-sep::before, .auth-sep::after { content: ""; flex: 1; height: 1px; background: var(--line); }
   .btn-ghost {
     width: 100%; background: transparent; color: var(--ink-soft); border: 0;
-    padding: 13px; font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit;
+    padding: 0; font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit;
+    min-height: 44px;
   }
 
   /* Detail */
@@ -548,8 +549,9 @@
   }
   .auth-tabs { display:flex; gap:6px; background:var(--sunken); padding:4px; border-radius:12px; margin-bottom:14px; }
   .auth-tabs button {
-    flex:1; padding:9px; border:0; background:transparent; border-radius:9px;
+    flex:1; padding:0; border:0; background:transparent; border-radius:9px;
     font:inherit; font-size:14px; font-weight:600; color:var(--ink-soft); cursor:pointer;
+    min-height:44px; display:flex; align-items:center; justify-content:center;
   }
   .auth-tabs button.active { background:var(--card); color:var(--ink); box-shadow:var(--shadow); }
   .auth-why { font-size:13px; color:var(--ink-soft); line-height:1.5; margin:0 0 14px; }
@@ -9105,7 +9107,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-25-1952";
+  var VALIZ_VERSION = "2026-07-25-2004";
   function verifierVersion() {
     if (VALIZ_VERSION === "0") return;   // pas encore estampille, on ne derange pas
     fetch("version.json", { cache: "no-store" })
