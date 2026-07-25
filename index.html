@@ -168,8 +168,8 @@
   .jetons {
     display: flex; align-items: center; gap: 6px; flex: 0 0 auto;
     border: 1px solid var(--line-strong); background: var(--card); color: var(--ink);
-    border-radius: 999px; padding: 6px 11px; font-size: 13px; font-weight: 700;
-    cursor: pointer; font-family: inherit;
+    border-radius: 999px; padding: 0 14px; font-size: 13.5px; font-weight: 700;
+    cursor: pointer; font-family: inherit; min-height: 44px; justify-content: center;
   }
   .jetons b { font-weight: 800; }
   .coin {
@@ -198,8 +198,9 @@
   }
   .segmented button {
     flex: 1; border: 0; background: transparent; cursor: pointer;
-    font-size: 13.5px; font-weight: 600; color: var(--ink-soft);
-    padding: 8px 0; border-radius: 8px; font-family: inherit;
+    font-size: 14px; font-weight: 600; color: var(--ink-soft);
+    padding: 0; border-radius: 8px; font-family: inherit;
+    min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 6px;
     transition: background .18s, color .18s;
   }
   .segmented button .cnt { font-size: 11px; opacity: .7; margin-left: 4px; }
@@ -228,7 +229,9 @@
   .ac-list {
     position: absolute; left: 0; right: 0; top: calc(100% + 5px);
     z-index: 100; background: var(--card); border: 1px solid var(--line-strong);
-    border-radius: 12px; box-shadow: 0 12px 34px rgba(0,0,0,.2); max-height: 250px; overflow-y: auto;
+    border-radius: 12px; box-shadow: 0 12px 34px rgba(0,0,0,.2); max-height: 250px;
+    overflow-y: auto; overflow-x: hidden;
+    overscroll-behavior-x: none; touch-action: pan-y pinch-zoom;
     padding: 5px; -webkit-overflow-scrolling: touch;
   }
   .ac-item {
@@ -242,16 +245,19 @@
   .alt-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
   .alt-chip {
     border: 1px solid var(--blue); background: var(--card); color: var(--blue); border-radius: 999px;
-    padding: 8px 13px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+    padding: 0 15px; font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: inherit;
+    min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 5px;
   }
   .alt-chip small { color: var(--ink-soft); font-weight: 600; }
   .alt-chip:hover { background: var(--blue); color: #fff; }
   .alt-chip:hover small { color: rgba(255,255,255,.85); }
   .searchbar #searchClear {
     border: 0; background: transparent; color: var(--ink-soft); cursor: pointer;
-    font-size: 15px; padding: 4px; line-height: 1; display: none; font-family: inherit;
+    font-size: 16px; padding: 0; line-height: 1; display: none; font-family: inherit;
+    min-width: 44px; min-height: 44px; align-items: center; justify-content: center;
+    flex: 0 0 auto; margin-right: -10px;
   }
-  .searchbar.has-value #searchClear { display: block; }
+  .searchbar.has-value #searchClear { display: flex; }
 
   main.list {
     flex: 1; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 14px;
@@ -331,8 +337,9 @@
   .fact .val .u { font-size: 11px; font-weight: 600; color: var(--ink-soft); }
   .cta-mini {
     background: var(--ink); color: var(--paper); border: 0; border-radius: 10px;
-    padding: 9px 13px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit;
+    padding: 0 13px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
     white-space: nowrap;
+    min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
   }
   .cta-mini.done { background: var(--green-soft); color: var(--green); }
 
@@ -371,7 +378,13 @@
   #colisOverlay { z-index: 55; }
   @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
   .sheet {
-    background: var(--paper); width: 100%; max-width: 448px; max-height: 92vh; overflow-y: auto;
+    background: var(--paper); width: 100%; max-width: 448px; max-height: 92vh;
+    /* overflow-y: auto force overflow-x a auto sur le meme element, ce qui fait
+       de chaque feuille un conteneur de defilement HORIZONTAL. Sur iOS il
+       rebondit au moindre glissement lateral, meme sans rien a faire defiler.
+       On le clippe donc explicitement. */
+    overflow-y: auto; overflow-x: hidden;
+    overscroll-behavior-x: none; touch-action: pan-y pinch-zoom;
     border-radius: 22px 22px 0 0; padding: 8px 20px 28px;
     animation: slideUp .28s cubic-bezier(.2,.8,.2,1);
   }
@@ -506,9 +519,10 @@
   /* ---- Compte et profil (phase 2) ---- */
   .head-actions { display:flex; align-items:center; gap:8px; }
   .me-btn {
-    display:flex; align-items:center; gap:7px; padding:5px 10px 5px 5px;
+    display:flex; align-items:center; gap:7px; padding:0 12px 0 6px;
     border:1px solid var(--line-strong); background:var(--card); color:var(--ink);
-    border-radius:999px; font:inherit; font-size:13px; font-weight:600; cursor:pointer;
+    border-radius:999px; font:inherit; font-size:13.5px; font-weight:600; cursor:pointer;
+    min-height:44px; justify-content:center;
   }
   .me-btn:hover { border-color:var(--blue); }
   .me-pic {
@@ -557,7 +571,8 @@
   .mini-sub { font-size:12px; color:var(--ink-soft); margin-top:2px; }
   .mini-del {
     border:1px solid var(--line-strong); background:transparent; color:var(--red);
-    border-radius:9px; padding:6px 10px; font:inherit; font-size:12px; font-weight:600; cursor:pointer;
+    border-radius:9px; padding:0 12px; font:inherit; font-size:13px; font-weight:600; cursor:pointer;
+    min-height:44px; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto;
   }
   .sect-title { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); margin:18px 0 2px; }
   /* Bouton de retrait d'annonce : lisible comme une action destructive, mais
