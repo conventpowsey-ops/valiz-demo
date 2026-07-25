@@ -596,6 +596,20 @@
   .role-box p { margin:8px 0 6px; color:var(--ink-soft); }
   .role-box ul { margin:0; padding-left:18px; color:var(--ink-soft); }
   .role-box li { margin-bottom:5px; }
+  .role-box.warn { border-color:var(--red); background:rgba(200,40,40,.06); }
+  .check-line {
+    display:flex; gap:10px; align-items:flex-start; margin-top:14px;
+    font-size:13px; line-height:1.45; cursor:pointer;
+  }
+  .check-line input { width:19px; height:19px; margin:1px 0 0; flex:none; accent-color:var(--green); }
+  .declared {
+    margin-top:14px; padding:12px 14px; border-radius:12px; background:var(--sunken);
+    border:1px solid var(--line-strong); font-size:14px;
+  }
+  .declared .lbl {
+    font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--ink-soft); margin-bottom:4px;
+  }
   .me-dot {
     display:inline-flex; align-items:center; justify-content:center; min-width:17px; height:17px;
     padding:0 4px; border-radius:999px; background:var(--red); color:#fff;
@@ -718,10 +732,51 @@
         <li>Ce que l'expéditeur verse au voyageur est une <b>participation aux frais</b>, plafonnée à 8 euros par kilo. Le voyageur s'engage à <b>ne tirer aucun bénéfice</b> de Valiz : au-delà de ses frais réels, il exercerait une activité de transport, ce que Valiz n'autorise pas.</li>
         <li>Valiz <b>n'est pas partie</b> à l'accord passé entre vous et <b>ne garantit ni la livraison, ni le contenu, ni l'état du colis</b>.</li>
         <li>Le code confirme seulement que vous vous êtes rencontrés. Valiz enregistre votre confirmation, sans en être témoin.</li>
-        <li>Chacun reste responsable de ce qu'il transporte ou envoie, et des règles de douane de son pays. Un voyageur peut et doit refuser un colis qu'il n'a pas pu inspecter.</li>
+        <li>Chacun reste responsable de ce qu'il transporte ou envoie, et des règles de douane de son pays.</li>
+        <li><b>Le colis se remet ouvert, et s'inspecte.</b> À chaque transport, l'expéditeur déclare son contenu et le voyageur accepte la liste des objets interdits. Un colis fermé se refuse, sans discussion. À l'enregistrement, la compagnie demande au voyageur s'il a fait ses bagages lui-même et si quelqu'un lui a remis un objet : c'est lui, personnellement, qui répond de ce qu'il embarque.</li>
       </ul>
     </div>
     <button type="button" class="btn-primary" data-close>Compris</button>
+  </div>
+</div>
+
+<!-- COLIS sheet : declaration du contenu et regles, a chaque transport -->
+<div class="overlay" id="colisOverlay">
+  <div class="sheet">
+    <div class="grabber"></div>
+    <h2 id="colisTitle">Ce que tu envoies</h2>
+    <p class="sub" id="colisSub">Le voyageur doit savoir ce qu'il accepte, et pouvoir le vérifier de ses yeux.</p>
+    <form id="colisForm">
+      <div class="field" id="colisContenuField">
+        <label>Décris ton colis</label>
+        <input name="contenu" maxlength="200" placeholder="Vêtements, documents, médicaments...">
+        <p class="auth-why" style="margin:6px 0 0">Sois précis. Un voyageur refuse plus souvent un colis flou qu'un colis banal.</p>
+      </div>
+      <div id="colisDeclare"></div>
+      <div class="role-box warn">
+        <b>Ce qui ne part jamais dans un bagage.</b>
+        <ul>
+          <li>Argent liquide, or, bijoux de valeur.</li>
+          <li>Armes, munitions, objets tranchants.</li>
+          <li>Stupéfiants, médicaments sur ordonnance en quantité.</li>
+          <li>Batteries au lithium, powerbanks, appareils à batterie non déclarés.</li>
+          <li>Liquides inflammables, aérosols, produits chimiques.</li>
+          <li>Viande, produits laitiers, plantes, semences, animaux.</li>
+          <li>Contrefaçons, et tout ce que la douane d'arrivée interdit.</li>
+          <li><b>Tout colis fermé</b> que le voyageur n'a pas pu ouvrir et regarder.</li>
+        </ul>
+      </div>
+      <div class="role-box warn" id="colisSurete" style="display:none">
+        <b>La question qu'on va te poser à l'enregistrement.</b>
+        <p>« Avez-vous fait vos bagages vous-même ? Quelqu'un vous a-t-il remis un objet à transporter ? » Tu dois pouvoir y répondre honnêtement. Un colis que tu n'as pas inspecté, tu le refuses : c'est toi, personnellement, qui réponds de ce que tu embarques, devant la compagnie et devant la douane.</p>
+      </div>
+      <label class="check-line">
+        <input type="checkbox" id="colisCheck">
+        <span id="colisCheckTxt"></span>
+      </label>
+      <button type="submit" class="btn-primary" id="colisSubmit" disabled>Envoyer la demande</button>
+      <button type="button" class="btn-ghost" data-close>Annuler</button>
+    </form>
   </div>
 </div>
 
@@ -7812,7 +7867,7 @@
         if (!tr) {
           html += '<button class="btn-primary" style="margin-top:12px" data-demander="' + i.id + '">'
             + 'Demander ce transport</button>'
-            + '<p class="tr-code-hint">Vous convenez ensemble du colis, de la date et de la participation aux frais, plafonnée à 8 €/kg. Valiz garde seulement la trace de votre accord et te donne un code à remettre à l\'arrivée.</p>';
+            + '<p class="tr-code-hint">Tu déclares ce que tu envoies, le voyageur l\'inspecte ouvert avant d\'accepter. Vous convenez ensemble de la date et de la participation aux frais, plafonnée à 8 €/kg. Valiz garde seulement la trace de votre accord et te donne un code à remettre à l\'arrivée.</p>';
         } else {
           html += '<div class="self-note">Transport ' + LIBELLE_STATUT[tr.statut].toLowerCase()
             + '. Suis-le depuis ton profil.</div>';
@@ -8171,11 +8226,14 @@
       +       (jeSuisVoyageur ? "tu transportes" : "tu envoies") + '</div>'
       +   '</div>'
       +   '<span class="tr-statut st-' + t.statut + '">' + LIBELLE_STATUT[t.statut] + '</span>'
-      +   '</div>';
+      +   '</div>'
+      +   (t.contenu_declare
+            ? '<div class="tr-sub" style="margin-top:6px">Colis déclaré : « ' + esc(t.contenu_declare) + ' »</div>'
+            : '');
 
     if (t.statut === "demande" && jeSuisVoyageur) {
       html += '<div class="tr-actions">'
-        + '<button class="tr-btn main" data-accepter="' + t.id + '">Accepter</button>'
+        + '<button class="tr-btn main" data-accepter="' + t.id + '" data-contenu="' + esc(t.contenu_declare || "") + '">Accepter</button>'
         + '<button class="tr-btn" data-refuser="' + t.id + '">Refuser</button></div>';
     } else if (t.statut === "demande") {
       html += '<div class="tr-sub" style="margin-top:8px">En attente de la réponse du voyageur.</div>';
@@ -8208,12 +8266,63 @@
       });
   }
 
+  // ---- Colis : declaration et regles, exigees a chaque transport ---------
+  var colisCtx = null;
+
+  function ouvrirColis(mode, ref, contenu) {
+    colisCtx = { mode: mode, ref: ref };
+    var envoi = mode === "envoi";
+    $("#colisTitle").textContent = envoi ? "Ce que tu envoies" : "Avant d'accepter ce colis";
+    $("#colisSub").textContent = envoi
+      ? "Le voyageur doit savoir ce qu'il accepte, et pouvoir le vérifier de ses yeux."
+      : "Tu réponds personnellement de ce que tu embarques. Prends une minute.";
+    $("#colisContenuField").style.display = envoi ? "block" : "none";
+    $("#colisSurete").style.display = envoi ? "none" : "block";
+    $("#colisDeclare").innerHTML = (!envoi && contenu)
+      ? '<div class="declared"><div class="lbl">Ce que l\'expéditeur déclare envoyer</div>« ' + esc(contenu) + ' »</div>'
+      : "";
+    $("#colisCheckTxt").innerHTML = envoi
+      ? "Je déclare que mon colis ne contient <b>rien</b> de la liste ci-dessus, et je le remettrai <b>ouvert</b> pour que le voyageur le vérifie."
+      : "J'ouvrirai et j'inspecterai le colis avant de le prendre. Je sais que je réponds <b>personnellement</b> de ce que j'embarque, devant la compagnie et devant la douane.";
+    $("#colisCheck").checked = false;
+    $("#colisSubmit").disabled = true;
+    $("#colisSubmit").textContent = envoi ? "Envoyer la demande" : "J'accepte ce transport";
+    $("#colisForm").contenu.value = "";
+    openOverlay("#colisOverlay");
+  }
+
+  $("#colisCheck").addEventListener("change", function(){
+    $("#colisSubmit").disabled = !this.checked;
+  });
+
+  $("#colisForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    if (!colisCtx || !$("#colisCheck").checked) return;
+    var btn = $("#colisSubmit");
+    btn.disabled = true;
+    if (colisCtx.mode === "envoi") {
+      var contenu = ($("#colisForm").contenu.value || "").trim();
+      if (contenu.length < 3) {
+        showToast("Décris ce que tu envoies, en quelques mots.");
+        btn.disabled = false;
+        return;
+      }
+      agirTransport(rpc("demander_transport", {
+          p_annonce: colisCtx.ref, p_contenu: contenu, p_regles: true
+        }), "Demande envoyée au voyageur.")
+        .then(function(){ closeAll(); ouvrirProfil(); })
+        .then(null, function(){ btn.disabled = false; });
+    } else {
+      agirTransport(rpc("repondre_transport", {
+          p_transport: colisCtx.ref, p_accepte: true, p_regles: true
+        }), "Transport accepté. L'expéditeur reçoit son code.")
+        .then(function(){ closeOverlay("#colisOverlay"); })
+        .then(null, function(){ btn.disabled = false; });
+    }
+  });
+
   function demanderTransport(id) {
-    exigeCompte(function(){
-      agirTransport(rpc("demander_transport", { p_annonce: id }),
-                    "Demande envoyée au voyageur.")
-        .then(function(){ closeAll(); ouvrirProfil(); });
-    });
+    exigeCompte(function(){ ouvrirColis("envoi", id, null); });
   }
 
   // ---- Profil -----------------------------------------------------------
@@ -8457,14 +8566,13 @@
 
     var acc = e.target.closest("[data-accepter]");
     if (acc) {
-      agirTransport(rpc("repondre_transport", { p_transport: acc.dataset.accepter, p_accepte: true }),
-                    "Transport accepté. L'expéditeur reçoit son code.");
+      ouvrirColis("accept", acc.dataset.accepter, acc.dataset.contenu || "");
       return;
     }
     var ref = e.target.closest("[data-refuser]");
     if (ref) {
       if (!window.confirm("Refuser cette demande de transport ?")) return;
-      agirTransport(rpc("repondre_transport", { p_transport: ref.dataset.refuser, p_accepte: false }),
+      agirTransport(rpc("repondre_transport", { p_transport: ref.dataset.refuser, p_accepte: false, p_regles: false }),
                     "Demande refusée.");
       return;
     }
