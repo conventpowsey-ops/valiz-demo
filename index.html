@@ -7556,7 +7556,11 @@
   function loadAnnonces() {
     return fetch(SUPA_REST + "/annonces_public?select=*", { headers: supaHeaders() })
       .then(function(res){ return res.ok ? res.json() : Promise.reject(res.status); })
-      .then(function(rows){ if (rows && rows.length) items = rows.map(mapRow); loading = false; render(); })
+      // `rows` vide est une INFORMATION : plus aucune annonce. L'ancien test
+      // `rows && rows.length` la traitait comme une non-reponse et laissait la
+      // liste telle quelle, donc une suppression qui vide la liste restait
+      // invisible pour toujours. Bug prouve en production le 25/07.
+      .then(function(rows){ if (rows) items = rows.map(mapRow); loading = false; render(); })
       .catch(function(){ loading = false; render(); });
   }
 
@@ -9037,7 +9041,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-25-1931";
+  var VALIZ_VERSION = "2026-07-25-1937";
   function verifierVersion() {
     if (VALIZ_VERSION === "0") return;   // pas encore estampille, on ne derange pas
     fetch("version.json", { cache: "no-store" })
@@ -9070,6 +9074,12 @@
     if (!document.hidden) rafraichir(false);
   });
   window.addEventListener("focus", function(){ rafraichir(false); });
+
+  // Et pendant que l'app est ouverte a l'ecran. Sans ceci, on ne voit ni les
+  // annonces que les autres publient, ni celles qu'ils retirent, tant qu'on ne
+  // quitte pas l'app pour y revenir. On ne sonde QUE si l'ecran est visible :
+  // en arriere-plan, rien ne part, donc rien ne consomme de batterie.
+  setInterval(function(){ if (!document.hidden) rafraichir(false); }, 25000);
 
   updateJetonChip();
   majCompte();
