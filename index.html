@@ -316,6 +316,10 @@
   @media (prefers-reduced-motion: reduce) {
     .plane { animation: none; left: 50%; }
     .pass { animation: none; }
+    /* Ceinture et bretelles : le code ne fabrique deja aucune particule dans ce
+       reglage, et si un jour il en fabriquait, elles resteraient invisibles. */
+    .jeton-particule { display: none; }
+    .jetons.gagne { animation: none; }
   }
 
   .pass-perf {
@@ -490,6 +494,32 @@
     animation: pop .4s cubic-bezier(.2,1.5,.4,1);
   }
   @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+
+  /* Gain de jetons : une salve breve qui part de la pastille du solde, la ou le
+     chiffre change. Purement decorative, l'ecran de succes annonce deja le gain
+     en toutes lettres, donc personne ne perd d'information si elle ne joue pas. */
+  .jeton-particule {
+    position: fixed; width: 11px; height: 11px; border-radius: 2px;
+    z-index: 90; pointer-events: none; opacity: 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,.18);
+    animation: eclat var(--duree, 1100ms) cubic-bezier(.15,.7,.35,1) forwards;
+  }
+  /* Une particule sur deux est une piece, pas un confetti : ce qu'on gagne ici,
+     ce sont des jetons, et la pastille du solde porte deja cette piece doree. */
+  .jeton-particule.piece {
+    width: 13px; height: 13px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #f4dc93, var(--gold));
+  }
+  @keyframes eclat {
+    0%   { opacity: 0; transform: translate(0,0) scale(.35) rotate(0deg); }
+    10%  { opacity: 1; }
+    72%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.1) rotate(var(--rot)); }
+  }
+  .jetons.gagne { animation: popJeton .55s cubic-bezier(.2,1.5,.4,1); }
+  @keyframes popJeton {
+    0% { transform: scale(1); } 35% { transform: scale(1.28); } 100% { transform: scale(1); }
+  }
 
   .toast {
     position: fixed; bottom: 92px; left: 50%; transform: translateX(-50%) translateY(20px);
@@ -7715,6 +7745,10 @@
           if (photo) args.p_photo_url = photo;
           return rpc("upsert_profil", args)
             .then(function(){ return rpc("reclamer_bonus", {}); })
+            // Le compte vient de naitre par Google : ses 3 jetons se fetent
+            // comme ceux d'une inscription au formulaire. Le drapeau attend la
+            // fin du demarrage, sinon la pastille n'existe pas encore.
+            .then(function(){ bonusGoogleAFeter = true; })
             .then(chargerMonProfil);
         });
       })
@@ -7844,6 +7878,7 @@
   var items = [];
   var unlocked = load(LS_UNLOCK, {});
   var balance = 0;
+  var bonusGoogleAFeter = false;   // compte cree par Google : fete differee a la fin du demarrage
   var state = { seg: "trajets", from: "", to: "" };
 
   function estAMoi(i) { return !!(me && i && i.userId && i.userId === me.id); }
@@ -8235,6 +8270,72 @@
     if (c) { closeAll(); return; }
   });
 
+  // ---- Fete du gain de jetons --------------------------------------------
+  // Appelee explicitement aux trois moments ou on gagne, jamais ailleurs. La
+  // tentation serait de l'accrocher a setBalance, qui voit passer tous les
+  // changements de solde : ce serait un piege, cette fonction tourne aussi a
+  // chaque connexion et a chaque rafraichissement, et une fete qui se declenche
+  // sans raison cesse d'etre une fete.
+  // Les couleurs viennent des variables du theme, jamais en dur : sinon la
+  // salve deviendrait illisible en mode sombre, ou le papier passe au noir.
+  var COULEURS_ECLAT = ["var(--gold)", "var(--blue)", "var(--green)", "var(--red)"];
+
+  function mouvementReduit() {
+    return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+
+  function semerParticule(x0, y0, k, total) {
+    var p = document.createElement("span");
+    var angle = (Math.PI * 2 * k) / total + (Math.random() - .5) * .4;
+    var loin = 70 + Math.random() * 90;
+    var duree = 900 + Math.random() * 400;
+    var piece = (k % 2 === 0);
+    p.className = "jeton-particule" + (piece ? " piece" : "");
+    p.style.left = x0 + "px";
+    p.style.top = y0 + "px";
+    if (!piece) p.style.background = COULEURS_ECLAT[k % COULEURS_ECLAT.length];
+    p.style.setProperty("--dx", Math.round(Math.cos(angle) * loin) + "px");
+    p.style.setProperty("--dy", Math.round(Math.sin(angle) * loin + 70) + "px");
+    p.style.setProperty("--rot", Math.round(Math.random() * 540 - 270) + "deg");
+    p.style.setProperty("--duree", Math.round(duree) + "ms");
+    document.body.appendChild(p);
+    // Une particule oubliee est un dechet, et il y en a vingt par gain.
+    setTimeout(function(){ if (p.parentNode) p.parentNode.removeChild(p); }, duree + 150);
+  }
+
+  // Le compteur monte au lieu de sauter : on doit VOIR ce qu'on a gagne.
+  function animerCompteur(gain) {
+    var chip = document.getElementById("jetonChip");
+    var b = chip && chip.querySelector("b");
+    if (!b || !me || gain <= 0) return;
+    var depart = Math.max(0, balance - gain), fait = 0;
+    var t = setInterval(function(){
+      fait++;
+      b.textContent = String(Math.min(balance, depart + fait));
+      if (depart + fait >= balance) { clearInterval(t); updateJetonChip(); }
+    }, Math.max(70, Math.round(600 / gain)));
+  }
+
+  function feterJetons(gain) {
+    var chip = document.getElementById("jetonChip");
+    if (!chip || !gain || gain <= 0) return;
+    if (mouvementReduit()) { updateJetonChip(); return; }
+    chip.classList.remove("gagne");
+    void chip.offsetWidth;            // relance l'animation si deux gains s'enchainent
+    chip.classList.add("gagne");
+    setTimeout(function(){ chip.classList.remove("gagne"); }, 620);
+    animerCompteur(gain);
+    var r = chip.getBoundingClientRect();
+    var x0 = Math.round(r.left + r.width / 2), y0 = Math.round(r.top + r.height / 2);
+    var combien = Math.min(28, 14 + gain * 3);
+    for (var k = 0; k < combien; k++) semerParticule(x0, y0, k, combien);
+  }
+
+  // Seule prise de la recette navigateur sur l'interieur du script : tout le
+  // reste est enferme dans la fonction anonyme, et une animation ne se prouve
+  // que depuis un vrai navigateur.
+  window.feterJetons = feterJetons;
+
   function successHTML(title, sub) {
     return '<div class="grabber"></div><div class="success"><div class="check">&#10003;</div>'
       + '<h2 style="text-align:center">' + title + '</h2>'
@@ -8323,7 +8424,10 @@
         if (typeof newBal === "number") setBalance(newBal); else loadBalance();
         var rid = pendingUnlockId; pendingUnlockId = null;
         $("#paySheet").innerHTML = successHTML("+"+p.t+" jetons", "Nouveau solde : "+balance+" jetons.");
-        setTimeout(function(){ closeOverlay("#payOverlay"); if (rid) openSpend(rid); else render(); }, 900);
+        feterJetons(p.t);
+        // 1400 ms et non 900 : sous 900, l'ecran se fermait avant la fin de la
+        // salve, on payait pour ne rien voir. Meme duree que la remise confirmee.
+        setTimeout(function(){ closeOverlay("#payOverlay"); if (rid) openSpend(rid); else render(); }, 1400);
       })
       .catch(function(err){
         closeOverlay("#payOverlay");
@@ -8453,6 +8557,7 @@
         closeOverlay("#authOverlay");
         majCompte(); updateJetonChip(); render();
         showToast(authMode === "signup" ? "Bienvenue ! 3 jetons t'attendent." : "Content de te revoir.");
+        if (authMode === "signup") feterJetons(3);
         var suite = apresConnexion; apresConnexion = null;
         if (suite) setTimeout(suite, 350);
       })
@@ -8970,6 +9075,7 @@
           .then(loadAnnonces)
           .then(function(){
             $("#paySheet").innerHTML = successHTML("Remise confirmée !", "Tu gagnes 1 jeton. Vous pouvez maintenant vous noter.");
+            feterJetons(1);
             setTimeout(function(){ closeOverlay("#payOverlay"); dessinerProfil(); openOverlay("#profilOverlay"); }, 1400);
           });
       })
@@ -9278,7 +9384,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-25-2117";
+  var VALIZ_VERSION = "2026-07-25-2154";
   function verifierVersion() {
     if (VALIZ_VERSION === "0") return;   // pas encore estampille, on ne derange pas
     fetch("version.json", { cache: "no-store" })
@@ -9332,7 +9438,10 @@
       }
       return authInit();
     })
-    .then(function(){ majCompte(); updateJetonChip(); render(); });
+    .then(function(){
+      majCompte(); updateJetonChip(); render();
+      if (bonusGoogleAFeter) { bonusGoogleAFeter = false; feterJetons(3); }
+    });
 })();
 </script>
 
