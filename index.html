@@ -660,9 +660,23 @@
   .stars-pick { display:flex; gap:6px; justify-content:center; margin-top:10px; }
   .star-btn {
     border:0; background:none; font-size:27px; line-height:1; cursor:pointer;
-    color:var(--line-strong); padding:0 2px;
+    color:var(--line-strong); padding:0 4px;
+    /* 44px est le plancher tactile Apple, sous lequel la mauvaise frappe
+       devient courante. Ces etoiles etaient restees a 27px. */
+    min-width:44px; min-height:44px;
   }
   .star-btn.on { color:var(--gold); }
+  /* 16px est un plancher, pas un choix graphique : sous 16px, iOS zoome tout
+     seul au focus et l'ecran se met a glisser lateralement. */
+  .avis-txt {
+    width:100%; margin-top:10px; padding:11px 12px; font:inherit; font-size:16px;
+    border:1px solid var(--line-strong); border-radius:11px; resize:vertical;
+    min-height:66px; background:var(--card); color:var(--ink); -webkit-appearance:none;
+  }
+  .avis-txt:focus { outline:2px solid var(--blue); outline-offset:0; border-color:var(--blue); }
+  .avis-envoi { width:100%; margin-top:8px; padding:11px 12px; }
+  .tr-btn[disabled] { opacity:.45; cursor:default; }
+  .avis-attente { font-size:12px; color:var(--ink-soft); margin-top:7px; line-height:1.45; }
   .notif-item {
     display:flex; gap:10px; padding:11px 0; border-bottom:1px solid var(--line);
   }
@@ -8493,6 +8507,16 @@
     refuse: "Refusé", annule: "Annulé"
   };
 
+  // Un avis non reciproque se revele tout seul 14 jours apres la livraison
+  // confirmee. Le serveur fait foi, ce calcul ne sert qu'a annoncer la date.
+  function revelationDe(t) {
+    if (!t.livre_at) return "";
+    var d = new Date(t.livre_at);
+    if (isNaN(d.getTime())) return "";
+    d.setDate(d.getDate() + 14);
+    return d.toISOString().slice(0, 10);
+  }
+
   function transportHTML(t) {
     var jeSuisVoyageur = t.voyageur_id === me.id;
     var autre = jeSuisVoyageur ? (t.expediteur_nom || "L'expéditeur") : (t.voyageur_nom || "Le voyageur");
@@ -8525,12 +8549,29 @@
     }
 
     if (aNoter) {
+      var prenom = esc(autre.split(" ")[0]);
       html += '<div class="tr-sub" style="margin-top:10px">Comment ça s\'est passé avec '
-        + esc(autre.split(" ")[0]) + ' ?</div><div class="stars-pick" data-noter="' + t.id + '">';
+        + prenom + ' ?</div><div class="stars-pick" data-noter="' + t.id + '">';
       for (var n = 1; n <= 5; n++) html += '<button class="star-btn" data-note="' + n + '">&#9733;</button>';
-      html += '</div>';
+      html += '</div>'
+        + '<textarea class="avis-txt" data-avis-txt="' + t.id + '" maxlength="600" '
+        +   'placeholder="Un mot sur ce transport (facultatif)"></textarea>'
+        + '<button class="tr-btn main avis-envoi" data-envoyer-avis="' + t.id + '" disabled>'
+        +   'Envoyer mon avis</button>'
+        + '<div class="avis-attente">Vous écrivez chacun sans voir l\'avis de l\'autre. '
+        +   'Celui de ' + prenom + ' s\'affichera dès que tu auras déposé le tien'
+        +   (revelationDe(t) ? ', ou tout seul le ' + fmtDate(revelationDe(t)) : '') + '.</div>';
     } else if (t.statut === "livre") {
-      html += '<div class="tr-sub" style="margin-top:8px">&#10003; Remise confirmée entre vous, note donnée.</div>';
+      // La note recue est celle portee par mon propre role : note_voyageur est
+      // la note recue PAR le voyageur, donc donnee par l'expediteur.
+      var recue = jeSuisVoyageur ? t.note_voyageur : t.note_expediteur;
+      if (recue !== null && recue !== undefined) {
+        html += '<div class="tr-sub" style="margin-top:8px">&#10003; Vous vous êtes notés tous les deux.</div>';
+      } else {
+        html += '<div class="tr-sub" style="margin-top:8px">&#10003; Ton avis est déposé. Celui de '
+          + esc(autre.split(" ")[0]) + ' apparaîtra dès qu\'il aura noté'
+          + (revelationDe(t) ? ', ou tout seul le ' + fmtDate(revelationDe(t)) : '') + '.</div>';
+      }
     }
     return html + '</div>';
   }
@@ -8904,12 +8945,33 @@
       return;
     }
 
+    // Choisir une etoile ne publie plus rien : on selectionne, on ecrit son
+    // commentaire, puis on envoie. Sans quoi il serait impossible d'en laisser un.
     var etoile = e.target.closest(".star-btn");
     if (etoile) {
       var groupe = etoile.closest("[data-noter]");
-      agirTransport(rpc("noter", { p_transport: groupe.dataset.noter,
-                                   p_note: parseInt(etoile.dataset.note, 10) }),
-                    "Merci, ta note est enregistrée.");
+      var choisie = parseInt(etoile.dataset.note, 10);
+      groupe.dataset.choisie = choisie;
+      Array.prototype.forEach.call(groupe.querySelectorAll(".star-btn"), function (b, i) {
+        b.classList.toggle("on", i < choisie);
+      });
+      var envoi = document.querySelector('[data-envoyer-avis="' + groupe.dataset.noter + '"]');
+      if (envoi) envoi.disabled = false;
+      return;
+    }
+
+    var envoyer = e.target.closest("[data-envoyer-avis]");
+    if (envoyer) {
+      var trId = envoyer.dataset.envoyerAvis;
+      var grp = document.querySelector('[data-noter="' + trId + '"]');
+      var note = parseInt(grp && grp.dataset.choisie, 10);
+      if (!note) { showToast("Choisis d'abord une note."); return; }
+      var zone = document.querySelector('[data-avis-txt="' + trId + '"]');
+      var texte = zone && zone.value ? zone.value.trim() : "";
+      envoyer.disabled = true;
+      agirTransport(rpc("noter", { p_transport: trId, p_note: note,
+                                   p_commentaire: texte || null }),
+                    "Merci, ton avis est enregistré.");
       return;
     }
     if (e.target.closest("#btnSupprCompte")) {
@@ -9100,7 +9162,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-25-2017";
+  var VALIZ_VERSION = "2026-07-25-2056";
   function verifierVersion() {
     if (VALIZ_VERSION === "0") return;   // pas encore estampille, on ne derange pas
     fetch("version.json", { cache: "no-store" })
