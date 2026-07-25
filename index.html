@@ -7529,8 +7529,17 @@
   // google-brancher), jamais avant, sinon le bouton mene a une erreur.
   var GOOGLE_ACTIF = true;
 
+  var NOM_PAR_DEFAUT = "Voyageur";
+
   function urlRetour() {
     return location.origin + location.pathname;
+  }
+
+  // Google renvoie le nom complet. On n'affiche que le prenom, comme pour les
+  // comptes email, et on retombe sur un nom neutre s'il ne donne rien.
+  function prenomDe(nomComplet) {
+    var mots = String(nomComplet || "").trim().split(/\s+/);
+    return (mots[0] && mots[0].length >= 2) ? mots[0].slice(0, 30) : NOM_PAR_DEFAUT;
   }
 
   function connexionGoogle() {
@@ -7550,17 +7559,24 @@
     history.replaceState(null, "", urlRetour());
     if (!p.access_token) return Promise.resolve(null);
     userToken = p.access_token;
+    var infos = {};
     return fetch(SUPA_URL + "/auth/v1/user", { headers: supaAuthHeaders() })
       .then(jsonOuErreur)
       .then(function(u){
+        infos = (u && u.user_metadata) || {};
         return saveSession({ access_token: p.access_token, refresh_token: p.refresh_token, user: u });
       })
       .then(function(){
-        // premiere venue par Google : le profil et les 3 jetons n'existent pas encore
+        // Premiere venue par Google : le profil et les 3 jetons n'existent pas
+        // encore. Google nous donne le nom et la photo, autant s'en servir :
+        // un profil qui s'appelle "Voyageur" ne dit rien a personne.
         return chargerMonProfil().then(function(prof){
-          if (prof && prof.display_name) return null;
-          var prenom = "Voyageur";
-          return rpc("upsert_profil", { p_display_name: prenom })
+          var deja = prof && prof.display_name && prof.display_name !== NOM_PAR_DEFAUT;
+          if (deja) return null;
+          var args = { p_display_name: prenomDe(infos.full_name || infos.name) };
+          var photo = infos.picture || infos.avatar_url;
+          if (photo) args.p_photo_url = photo;
+          return rpc("upsert_profil", args)
             .then(function(){ return rpc("reclamer_bonus", {}); })
             .then(chargerMonProfil);
         });
