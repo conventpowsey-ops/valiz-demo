@@ -670,8 +670,9 @@
         </div>
       </div>
       <div class="field" id="priceField">
-        <label>Prix indicatif (€/kg)</label>
-        <input name="price" type="number" min="1" max="50" placeholder="12">
+        <label>Participation aux frais (€/kg)</label>
+        <input name="price" type="number" min="0" max="8" placeholder="5">
+        <p class="auth-why" style="margin:6px 0 0">Ce montant couvre <b>tes frais</b>, il ne doit pas te faire gagner d'argent. Un bagage supplémentaire de 23 kg coûte 60 à 100 euros : compte 4 à 6 euros par kilo, <b>8 au maximum</b>.</p>
       </div>
       <div class="field" id="contentField" style="display:none">
         <label>Que veux-tu envoyer ?</label>
@@ -702,9 +703,10 @@
     <ol class="how-steps">
       <li><span class="how-num">1</span><div><b>Trouve ton trajet.</b> Cherche un voyageur sur ton itinéraire, ville de départ et ville d'arrivée, ou publie ta demande d'envoi.</div></li>
       <li><span class="how-num">2</span><div><b>Débloque le contact.</b> Un jeton révèle le nom et les coordonnées, pour organiser l'envoi ensemble.</div></li>
-      <li><span class="how-num">3</span><div><b>Vous vous organisez, entre vous.</b> Le colis, la date, le prix, l'emballage : tout ça se décide directement entre vous deux. Valiz n'intervient pas dans votre accord.</div></li>
-      <li><span class="how-num">4</span><div><b>Un code pour confirmer la remise.</b> Quand le voyageur accepte, tu reçois un code à 4 chiffres. Tu ne le donnes qu'au moment où il te remet le colis. En le saisissant, il confirme que la remise a eu lieu : c'est ce qui ouvre la notation et lui fait gagner 1 jeton. Sans code, pas de note, donc pas de faux avis.</div></li>
-      <li><span class="how-num">5</span><div><b>Comment obtenir des jetons.</b> Tu en reçois 3 en créant ton compte, tu en gagnes 1 à chaque remise confirmée, et tu peux en acheter.</div></li>
+      <li><span class="how-num">3</span><div><b>Vous vous organisez, entre vous.</b> Le colis, la date, l'emballage : tout ça se décide directement entre vous deux. Valiz n'intervient pas dans votre accord.</div></li>
+      <li><span class="how-num">4</span><div><b>Une participation aux frais, pas un revenu.</b> L'expéditeur participe aux frais du voyageur, bagage supplémentaire et trajet à l'aéroport. Elle est <b>plafonnée à 8 euros par kilo</b> et ne doit jamais dépasser ce que le voyage coûte réellement. Valiz n'est pas un service de transport payant, et un voyageur qui gagne de l'argent sort du cadre.</div></li>
+      <li><span class="how-num">5</span><div><b>Un code pour confirmer la remise.</b> Quand le voyageur accepte, tu reçois un code à 4 chiffres. Tu ne le donnes qu'au moment où il te remet le colis. En le saisissant, il confirme que la remise a eu lieu : c'est ce qui ouvre la notation et lui fait gagner 1 jeton. Sans code, pas de note, donc pas de faux avis.</div></li>
+      <li><span class="how-num">6</span><div><b>Comment obtenir des jetons.</b> Tu en reçois 3 en créant ton compte, tu en gagnes 1 à chaque remise confirmée, et tu peux en acheter.</div></li>
     </ol>
     <p class="how-trust">Tu peux tout parcourir sans compte. Le compte n'est demandé qu'au moment de publier ou de débloquer un contact, pour que chacun sache à qui il parle.</p>
     <div class="role-box">
@@ -712,7 +714,8 @@
       <p>Valiz met en relation des voyageurs et des expéditeurs, rien de plus. Concrètement :</p>
       <ul>
         <li>Valiz <b>ne transporte pas</b> et ne prend en charge aucun colis.</li>
-        <li>Valiz <b>ne fixe aucun prix</b> de transport et n'encaisse pas votre accord. Les jetons ne paient que la mise en relation.</li>
+        <li>Valiz <b>ne vend aucun transport</b> et n'encaisse pas votre accord. Les jetons ne paient que la mise en relation.</li>
+        <li>Ce que l'expéditeur verse au voyageur est une <b>participation aux frais</b>, plafonnée à 8 euros par kilo. Le voyageur s'engage à <b>ne tirer aucun bénéfice</b> de Valiz : au-delà de ses frais réels, il exercerait une activité de transport, ce que Valiz n'autorise pas.</li>
         <li>Valiz <b>n'est pas partie</b> à l'accord passé entre vous et <b>ne garantit ni la livraison, ni le contenu, ni l'état du colis</b>.</li>
         <li>Le code confirme seulement que vous vous êtes rencontrés. Valiz enregistre votre confirmation, sans en être témoin.</li>
         <li>Chacun reste responsable de ce qu'il transporte ou envoie, et des règles de douane de son pays. Un voyageur peut et doit refuser un colis qu'il n'a pas pu inspecter.</li>
@@ -7340,12 +7343,12 @@
 
   // Seed data
   var SEED = [
-    { id:"t1", kind:"trajet", name:"Aline M.", from:"BRU", to:"FIH", date:"2026-08-12", kg:8, price:12, rating:4.9, trips:14, verified:true, phone:"+32 478 21 44 09", email:"aline.m@mail.be" },
-    { id:"t2", kind:"trajet", name:"Thierry K.", from:"BRU", to:"LBV", date:"2026-08-18", kg:5, price:13, rating:4.7, trips:6, verified:true, phone:"+32 471 88 12 30", email:"t.kombila@mail.be" },
-    { id:"t3", kind:"trajet", name:"Sarah D.", from:"BRU", to:"DKR", date:"2026-08-24", kg:15, price:10, rating:5.0, trips:3, verified:false, phone:"+32 493 55 71 62", email:"sarah.diop@mail.be" },
-    { id:"t4", kind:"trajet", name:"Moussa T.", from:"BRU", to:"DLA", date:"2026-08-29", kg:10, price:12, rating:4.8, trips:21, verified:true, phone:"+32 476 33 90 18", email:"moussa.t@mail.be" },
-    { id:"t5", kind:"trajet", name:"Jean-Marc B.", from:"FIH", to:"BRU", date:"2026-08-15", kg:7, price:12, rating:4.9, trips:11, verified:true, phone:"+243 81 402 77 51", email:"jm.baki@mail.cd" },
-    { id:"t6", kind:"trajet", name:"Fatou N.", from:"BRU", to:"ABJ", date:"2026-09-02", kg:6, price:11, rating:4.6, trips:9, verified:true, phone:"+32 484 12 66 07", email:"fatou.n@mail.be" },
+    { id:"t1", kind:"trajet", name:"Aline M.", from:"BRU", to:"FIH", date:"2026-08-12", kg:8, price:7, rating:4.9, trips:14, verified:true, phone:"+32 478 21 44 09", email:"aline.m@mail.be" },
+    { id:"t2", kind:"trajet", name:"Thierry K.", from:"BRU", to:"LBV", date:"2026-08-18", kg:5, price:7, rating:4.7, trips:6, verified:true, phone:"+32 471 88 12 30", email:"t.kombila@mail.be" },
+    { id:"t3", kind:"trajet", name:"Sarah D.", from:"BRU", to:"DKR", date:"2026-08-24", kg:15, price:6, rating:5.0, trips:3, verified:false, phone:"+32 493 55 71 62", email:"sarah.diop@mail.be" },
+    { id:"t4", kind:"trajet", name:"Moussa T.", from:"BRU", to:"DLA", date:"2026-08-29", kg:10, price:7, rating:4.8, trips:21, verified:true, phone:"+32 476 33 90 18", email:"moussa.t@mail.be" },
+    { id:"t5", kind:"trajet", name:"Jean-Marc B.", from:"FIH", to:"BRU", date:"2026-08-15", kg:7, price:7, rating:4.9, trips:11, verified:true, phone:"+243 81 402 77 51", email:"jm.baki@mail.cd" },
+    { id:"t6", kind:"trajet", name:"Fatou N.", from:"BRU", to:"ABJ", date:"2026-09-02", kg:6, price:6, rating:4.6, trips:9, verified:true, phone:"+32 484 12 66 07", email:"fatou.n@mail.be" },
     { id:"d1", kind:"demande", name:"Grâce L.", from:"BRU", to:"FIH", date:"2026-08-20", kg:4, content:"Médicaments et vêtements pour ma mère", rating:4.8, trips:5, verified:true, phone:"+32 495 70 22 41", email:"grace.l@mail.be" },
     { id:"d2", kind:"demande", name:"Patrick O.", from:"BRU", to:"LBV", date:"2026-08-25", kg:3, content:"Pièces détachées téléphone", rating:4.5, trips:2, verified:false, phone:"+32 470 91 55 13", email:"p.obame@mail.be" },
     { id:"d3", kind:"demande", name:"Awa S.", from:"BRU", to:"DKR", date:"2026-08-30", kg:6, content:"Cadeaux famille et produits de soin", rating:5.0, trips:4, verified:true, phone:"+32 486 30 47 88", email:"awa.sow@mail.be" },
@@ -7679,7 +7682,7 @@
       +     '<div class="facts">'
       +       '<div class="fact"><div class="lbl">'+(isTrajet?"Départ":"Avant le")+'</div><div class="val mono">'+fmtDate(i.date)+'</div></div>'
       +       '<div class="fact"><div class="lbl">'+(isTrajet?"Kg dispo":"Kg à envoyer")+'</div><div class="val mono">'+i.kg+'<span class="u"> kg</span></div></div>'
-      +       (isTrajet ? '<div class="fact"><div class="lbl">Prix</div><div class="val mono">'+i.price+'<span class="u"> €/kg</span></div></div>' : '')
+      +       (isTrajet ? '<div class="fact"><div class="lbl">Frais</div><div class="val mono">'+i.price+'<span class="u"> €/kg</span></div></div>' : '')
       +     '</div>'
       +     '<button class="cta-mini '+(revealed?"done":"")+'">'+(isMine?"Ton annonce":(isUnlocked?"✓ Débloqué":(i.isDemo?"Voir (démo)":"Contact")))+'</button>'
       +   '</div>'
@@ -7795,7 +7798,7 @@
       +   '<div class="d-meta">'
       +     '<div class="d-fact"><div class="lbl">'+(isTrajet?"Départ":"Avant le")+'</div><div class="val mono">'+fmtDate(i.date)+'</div></div>'
       +     '<div class="d-fact"><div class="lbl">'+(isTrajet?"Kg dispo":"Kg à envoyer")+'</div><div class="val mono">'+i.kg+' kg</div></div>'
-      +     (isTrajet ? '<div class="d-fact"><div class="lbl">Prix</div><div class="val mono">'+i.price+' €/kg</div></div>' : '')
+      +     (isTrajet ? '<div class="d-fact"><div class="lbl">Participation aux frais</div><div class="val mono">'+i.price+' €/kg</div></div>' : '')
       +   '</div>'
       +   (!isTrajet && i.content ? '<div class="demand-note" style="padding:14px 0 0">« '+esc(i.content)+' »</div>' : '')
       + '</div>';
@@ -7809,7 +7812,7 @@
         if (!tr) {
           html += '<button class="btn-primary" style="margin-top:12px" data-demander="' + i.id + '">'
             + 'Demander ce transport</button>'
-            + '<p class="tr-code-hint">Vous convenez ensemble du colis, du prix et de la date. Valiz garde seulement la trace de votre accord et te donne un code à remettre à l\'arrivée.</p>';
+            + '<p class="tr-code-hint">Vous convenez ensemble du colis, de la date et de la participation aux frais, plafonnée à 8 €/kg. Valiz garde seulement la trace de votre accord et te donne un code à remettre à l\'arrivée.</p>';
         } else {
           html += '<div class="self-note">Transport ' + LIBELLE_STATUT[tr.statut].toLowerCase()
             + '. Suis-le depuis ton profil.</div>';
@@ -7836,7 +7839,7 @@
     html += '<p class="disclaimer">' + (i.isDemo
         ? 'Annonce de démonstration, contact fictif.'
         : 'Beta. Les paiements de jetons ne sont pas encore réels.')
-      + ' Valiz met en relation : elle ne transporte pas, ne fixe pas le prix du transport et n\'est pas partie à votre accord. '
+      + ' Valiz met en relation : elle ne transporte pas, ne vend aucun transport et n\'est pas partie à votre accord. Ce qui est versé au voyageur est une participation à ses frais, plafonnée à 8 €/kg, jamais un revenu. '
       + 'Chacun reste responsable de ce qu\'il envoie ou transporte, et des règles de douane.</p>';
     $("#detailSheet").innerHTML = html;
     openOverlay("#detailOverlay");
@@ -8323,7 +8326,7 @@
       + '<div class="sect-title">Passées</div>'
       + (passees.length ? '<ul class="mini-list">' + passees.map(ligne).join("") + '</ul>'
                         : '<p class="prof-meta">Rien pour le moment.</p>')
-      + '<p class="prof-meta" style="margin-top:16px">Un transport se règle en trois temps : tu demandes, le voyageur accepte, et il saisit ton code à 4 chiffres au moment de te remettre le colis. Ce code confirme seulement que la remise a eu lieu entre vous, et ouvre la notation. Le colis, le prix et la date se décident directement entre vous : Valiz n\'y prend pas part.</p>'
+      + '<p class="prof-meta" style="margin-top:16px">Un transport se règle en trois temps : tu demandes, le voyageur accepte, et il saisit ton code à 4 chiffres au moment de te remettre le colis. Ce code confirme seulement que la remise a eu lieu entre vous, et ouvre la notation. Le colis, la date et la participation aux frais se décident directement entre vous : Valiz n\'y prend pas part.</p>'
       + '<button type="button" class="btn-ghost" id="btnDeconnexion" style="margin-top:14px">Me déconnecter</button>'
       + '<button type="button" class="btn-ghost" data-close>Fermer</button>'
       + '<button type="button" class="danger-link" id="btnSupprCompte">Supprimer mon compte et mes données</button>';
@@ -8566,7 +8569,7 @@
       p_from: fromCode, p_to: toCode,
       p_date: f.date.value,
       p_kg: parseInt(f.kg.value, 10) || 1,
-      p_price: postKind === "trajet" ? (parseInt(f.price.value, 10) || 12) : null,
+      p_price: postKind === "trajet" ? Math.min(8, Math.max(0, parseInt(f.price.value, 10) || 5)) : null,
       p_content: postKind === "demande" ? ((f.content.value || "").trim() || "Colis") : null,
       p_phone: tel
     };
