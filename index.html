@@ -736,6 +736,21 @@
   .fp-avis-cache { font-size:12.5px; color:var(--ink-soft); margin-top:5px; font-style:italic; }
   .fp-vide { font-size:13.5px; color:var(--ink-soft); }
   .who[data-fiche] { cursor:pointer; }
+  /* Parrainage : le code se lit a voix haute au telephone et se recopie a la
+     main depuis un groupe WhatsApp, donc il s'affiche gros et espace. */
+  .parrain-carte { background:var(--sunken); border-radius:14px; padding:14px; margin-bottom:6px; }
+  .parrain-code {
+    font-size:26px; font-weight:800; letter-spacing:.16em; text-align:center;
+    margin:2px 0 12px; font-variant-numeric:tabular-nums;
+  }
+  .parrain-liste { margin-top:12px; }
+  .parrain-filleul {
+    display:flex; justify-content:space-between; align-items:baseline; gap:8px;
+    padding:7px 0; border-bottom:1px solid var(--line); font-size:13.5px;
+  }
+  .parrain-filleul:last-child { border-bottom:0; }
+  .parrain-etat { font-size:11.5px; color:var(--ink-soft); flex:0 0 auto; }
+  .parrain-etat.paye { color:var(--green); font-weight:700; }
   .notif-item {
     display:flex; gap:10px; padding:11px 0; border-bottom:1px solid var(--line);
   }
@@ -7749,6 +7764,9 @@
             // comme ceux d'une inscription au formulaire. Le drapeau attend la
             // fin du demarrage, sinon la pastille n'existe pas encore.
             .then(function(){ bonusGoogleAFeter = true; })
+            // Le code d'invitation a ete memorise avant le detour par Google,
+            // c'est exactement pour ce chemin-la qu'il vit dans localStorage.
+            .then(rattacherParrainSiInvite)
             .then(chargerMonProfil);
         });
       })
@@ -8512,8 +8530,13 @@
       b.classList.toggle("active", b.dataset.mode === authMode);
     });
     $("#authTitle").textContent = estInscription ? "Créer mon compte" : "Me connecter";
+    // Quelqu'un qui arrive par un lien d'invitation doit voir qu'il a ete
+    // invite : c'est ce qui fait la difference entre une page inconnue et la
+    // recommandation d'un ami.
     $("#authSub").textContent = estInscription
-      ? "3 jetons offerts, de quoi débloquer tes 3 premiers contacts."
+      ? (codeParrainMemorise()
+           ? "Tu as été invité par un ami. 3 jetons offerts, de quoi débloquer tes 3 premiers contacts."
+           : "3 jetons offerts, de quoi débloquer tes 3 premiers contacts.")
       : "Retrouve ton solde, tes annonces et tes contacts débloqués.";
     $("#authWhy").textContent = estInscription
       ? "Ton compte garde ton solde et tes annonces, même si tu changes de téléphone. Ton email n'est jamais affiché aux autres."
@@ -8557,7 +8580,7 @@
         closeOverlay("#authOverlay");
         majCompte(); updateJetonChip(); render();
         showToast(authMode === "signup" ? "Bienvenue ! 3 jetons t'attendent." : "Content de te revoir.");
-        if (authMode === "signup") feterJetons(3);
+        if (authMode === "signup") { feterJetons(3); rattacherParrainSiInvite(); }
         var suite = apresConnexion; apresConnexion = null;
         if (suite) setTimeout(suite, 350);
       })
@@ -8892,6 +8915,113 @@
       });
   }
 
+  // ---- Parrainage ---------------------------------------------------------
+  // Le lien d'invitation porte le code : .../?p=XXXXXX. Il est memorise des
+  // l'arrivee, AVANT toute creation de compte, parce que l'inscription passe
+  // parfois par Google, ce qui fait quitter la page puis y revenir.
+  var CLE_PARRAIN = "valiz_parrain";
+
+  function memoriserCodeParrain() {
+    try {
+      var url = new URL(window.location.href);
+      var recu = (url.searchParams.get("p") || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (recu.length === 6) {
+        localStorage.setItem(CLE_PARRAIN, recu);
+        // On nettoie l'adresse tout de suite : un code qui reste dans la barre
+        // repartirait dans le prochain partage, et crediterait le mauvais parrain.
+        url.searchParams.delete("p");
+        history.replaceState(null, "", url.toString());
+      }
+    } catch (e) { /* navigateur sans localStorage ou URL exotique : on ignore */ }
+  }
+
+  function codeParrainMemorise() {
+    try { return localStorage.getItem(CLE_PARRAIN) || ""; } catch (e) { return ""; }
+  }
+
+  function rattacherParrainSiInvite() {
+    var code = codeParrainMemorise();
+    if (!code) return Promise.resolve();
+    return rpc("rattacher_parrain", { p_code: code })
+      .then(function(){
+        showToast("Parrainage enregistré. Ton ami gagne 1 jeton à ton premier transport.");
+      })
+      // Code perime, filleul deja rattache, compte deja actif : le serveur
+      // refuse et il a raison. Ce n'est pas une erreur a montrer a quelqu'un
+      // qui vient de creer son compte.
+      .catch(function(){})
+      .then(function(){ try { localStorage.removeItem(CLE_PARRAIN); } catch (e) {} });
+  }
+
+  function lienParrainage(code) {
+    return location.origin + location.pathname + "?p=" + encodeURIComponent(code);
+  }
+
+  function rendreParrainage(code, filleuls) {
+    var bloc = document.getElementById("parrainBloc");
+    if (!bloc) return;
+    var lignes = (filleuls || []).map(function(f){
+      var paye = !!f.bonus_verse_at;
+      var etat = paye ? "1 jeton gagné"
+                      : (f.actif ? "en attente de vérification" : "pas encore de transport");
+      return '<div class="parrain-filleul"><span>' + esc(f.prenom || "Quelqu'un") + '</span>'
+        + '<span class="parrain-etat' + (paye ? " paye" : "") + '">' + etat + '</span></div>';
+    }).join("");
+    bloc.innerHTML = ''
+      + '<div class="parrain-code">' + esc(code) + '</div>'
+      + '<button type="button" class="btn-primary" data-partager="' + esc(lienParrainage(code)) + '">'
+      +   'Partager mon lien</button>'
+      + '<p class="prof-meta" style="margin:10px 0 0">Quand la personne que tu invites fait son '
+      +   'premier transport, tu gagnes 1 jeton. Le bonus tombe une fois son numéro vérifié par '
+      +   'SMS, bientôt disponible. Cinq par mois au maximum.</p>'
+      + (lignes ? '<div class="parrain-liste">' + lignes + '</div>' : '');
+  }
+
+  function chargerParrainage() {
+    var bloc = document.getElementById("parrainBloc");
+    if (!bloc || !me) return;
+    // Le rattrapage est appele ici, a l'ouverture du profil, plutot que par un
+    // cron : le jour ou la verification par SMS existera, les bonus en attente
+    // se verseront tout seuls, sans tache planifiee a surveiller.
+    Promise.all([
+      rpc("mon_code_parrain", {}),
+      rpc("verser_parrainages_dus", {}).catch(function(){ return 0; }),
+    ]).then(function(res){
+      var code = String(res[0] == null ? "" : res[0]).replace(/"/g, "");
+      var verses = Number(res[1]) || 0;
+      if (verses > 0) {
+        loadBalance().then(function(){
+          var stat = document.querySelector("#profilSheet .prof-stat .v");
+          if (stat) stat.textContent = balance;
+          updateJetonChip();
+          feterJetons(verses);
+        });
+      }
+      return rpc("mes_filleuls", {}).then(function(filleuls){
+        rendreParrainage(code, Array.isArray(filleuls) ? filleuls : []);
+      });
+    }).catch(function(){
+      bloc.innerHTML = '<p class="prof-meta" style="margin:0">Impossible de charger ton code '
+        + 'pour le moment.</p>';
+    });
+  }
+
+  document.addEventListener("click", function(e){
+    var b = e.target.closest("[data-partager]");
+    if (!b) return;
+    var lien = b.getAttribute("data-partager");
+    var texte = "Rejoins-moi sur Valiz : tes colis voyagent avec ceux qui prennent l'avion. " + lien;
+    if (navigator.share) {
+      navigator.share({ title: "Valiz", text: texte, url: lien }).catch(function(){});
+    } else if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(lien)
+        .then(function(){ showToast("Lien copié, colle-le dans ton groupe."); })
+        .catch(function(){ showToast(lien); });
+    } else {
+      showToast(lien);
+    }
+  });
+
   function dessinerProfil() {
     if (!me) return;
     var p = monProfil || {};
@@ -8962,6 +9092,9 @@
       +   '<button type="button" class="switch' + (p.notif_mail === false ? '' : ' on') + '" id="switchNotif"'
       +     ' aria-label="Notifications par email"></button>'
       + '</div>'
+      + '<div class="sect-title">Inviter des amis</div>'
+      + '<div id="parrainBloc" class="parrain-carte">'
+      +   '<p class="prof-meta" style="margin:0">Un instant.</p></div>'
       + '<div class="sect-title">Mes notifications</div>'
       + (mesNotifs.length
            ? mesNotifs.slice(0, 12).map(notifHTML).join("")
@@ -8980,6 +9113,8 @@
       + '<button type="button" class="btn-ghost" id="btnDeconnexion" style="margin-top:14px">Me déconnecter</button>'
       + '<button type="button" class="btn-ghost" data-close>Fermer</button>'
       + '<button type="button" class="danger-link" id="btnSupprCompte">Supprimer mon compte et mes données</button>';
+
+    chargerParrainage();
 
     // Le bouton Enregistrer suit l'etat reel du formulaire. On memorise
     // l'empreinte des valeurs au moment de l'ouverture, et on la recompare a
@@ -9384,7 +9519,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-25-2154";
+  var VALIZ_VERSION = "2026-07-25-2218";
   function verifierVersion() {
     if (VALIZ_VERSION === "0") return;   // pas encore estampille, on ne derange pas
     fetch("version.json", { cache: "no-store" })
@@ -9424,6 +9559,9 @@
   // en arriere-plan, rien ne part, donc rien ne consomme de batterie.
   setInterval(function(){ if (!document.hidden) rafraichir(false); }, 25000);
 
+  // Tout en haut du demarrage : le code d'invitation doit etre capte avant que
+  // quoi que ce soit d'autre puisse nettoyer l'adresse ou rediriger.
+  memoriserCodeParrain();
   updateJetonChip();
   majCompte();
   render();
