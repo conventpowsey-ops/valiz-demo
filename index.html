@@ -375,7 +375,10 @@
   }
   .overlay.open { display: flex; animation: fade .2s; }
   /* la feuille du colis s'ouvre par-dessus le profil, d'ou elle est appelee */
-  #colisOverlay { z-index: 55; }
+  /* La rustine #colisOverlay { z-index: 55 } du 25/07 au matin est retiree :
+     openOverlay empile desormais toutes les feuilles a l'ouverture, ce qui
+     couvre ce cas et tous les autres. Deux mecanismes pour un meme role, c'est
+     celui qu'on oublie qui casse. */
   @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
   .sheet {
     background: var(--paper); width: 100%; max-width: 448px; max-height: 92vh;
@@ -9051,9 +9054,35 @@
     champ.focus();
   });
 
-  function openOverlay(sel) { $(sel).classList.add("open"); document.body.style.overflow = "hidden"; }
-  function closeOverlay(sel) { $(sel).classList.remove("open"); document.body.style.overflow = ""; }
-  function closeAll() { [].forEach.call(document.querySelectorAll(".overlay"), function(o){ o.classList.remove("open"); }); document.body.style.overflow = ""; }
+  // Empilement explicite des feuilles. Toutes les .overlay partagent z-index: 50,
+  // donc a egalite c'est l'ORDRE DU DOM qui decide qui passe devant. Or
+  // #payOverlay est declare AVANT #profilOverlay : une feuille ouverte depuis le
+  // profil passait donc DERRIERE lui, ouverte mais invisible. C'est ce qui
+  // empechait Lionel et Max de voir le code de remise le 25/07.
+  // Le matin du meme jour, le meme bug sur la feuille du colis avait ete
+  // rattrape par une rustine (#colisOverlay { z-index: 55 }), qui ne reglait que
+  // ce cas-la. On corrige donc la classe entiere : a l'ouverture, la feuille se
+  // place au-dessus de toutes celles deja ouvertes. Borne par le nombre de
+  // feuilles simultanees, donc la valeur reste petite et ne derive jamais.
+  function openOverlay(sel) {
+    var el = $(sel);
+    var dejaOuvertes = document.querySelectorAll(".overlay.open").length;
+    el.style.zIndex = 50 + dejaOuvertes + 1;
+    el.classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+  function closeOverlay(sel) {
+    var el = $(sel);
+    el.classList.remove("open");
+    el.style.zIndex = "";          // on ne laisse pas fuiter la valeur posee
+    document.body.style.overflow = "";
+  }
+  function closeAll() {
+    [].forEach.call(document.querySelectorAll(".overlay"), function(o){
+      o.classList.remove("open"); o.style.zIndex = "";
+    });
+    document.body.style.overflow = "";
+  }
   [].forEach.call(document.querySelectorAll(".overlay"), function(o){
     o.addEventListener("click", function(e){ if (e.target === o) closeAll(); });
   });
@@ -9076,7 +9105,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-25-1944";
+  var VALIZ_VERSION = "2026-07-25-1952";
   function verifierVersion() {
     if (VALIZ_VERSION === "0") return;   // pas encore estampille, on ne derange pas
     fetch("version.json", { cache: "no-store" })
