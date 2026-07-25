@@ -84,7 +84,12 @@
   }
 
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
+  html, body { margin: 0; padding: 0; overflow-x: hidden; overscroll-behavior-x: none; }
+  /* Le geste horizontal ne sert a rien ici : aucun conteneur de l'app ne defile
+     lateralement. On le neutralise pour que l'ecran ne ballote plus de gauche a
+     droite au moindre slide sur telephone. Le zoom a deux doigts reste permis,
+     on ne sacrifie pas l'accessibilite. */
+  body { touch-action: pan-y pinch-zoom; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     color: var(--ink);
@@ -213,8 +218,10 @@
   .searchbar input::-webkit-search-cancel-button { display: none; }
   .sb-sep { color: var(--ink-soft); font-size: 15px; flex: 0 0 auto; font-weight: 700; }
 
+  .ac-hote { position: relative; }
   .ac-list {
-    position: fixed; z-index: 100; background: var(--card); border: 1px solid var(--line-strong);
+    position: absolute; left: 0; right: 0; top: calc(100% + 5px);
+    z-index: 100; background: var(--card); border: 1px solid var(--line-strong);
     border-radius: 12px; box-shadow: 0 12px 34px rgba(0,0,0,.2); max-height: 250px; overflow-y: auto;
     padding: 5px; -webkit-overflow-scrolling: touch;
   }
@@ -545,6 +552,14 @@
     border-radius:9px; padding:6px 10px; font:inherit; font-size:12px; font-weight:600; cursor:pointer;
   }
   .sect-title { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); margin:18px 0 2px; }
+  /* Bouton de retrait d'annonce : lisible comme une action destructive, mais
+     sobre, pour ne pas concurrencer visuellement le bouton principal. */
+  .btn-danger {
+    width: 100%; background: var(--card); color: var(--red);
+    border: 1px solid var(--red); border-radius: 13px; padding: 13px;
+    font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer;
+  }
+  .btn-danger:active { background: var(--red); color: #fff; }
   .danger-link { display:block; width:100%; margin-top:16px; background:none; border:0; color:var(--red); font:inherit; font-size:13px; text-decoration:underline; cursor:pointer; }
   .pic-row { display:flex; align-items:center; gap:12px; margin-bottom:6px; }
   .pic-btn {
@@ -7794,11 +7809,18 @@
   acList.className = "ac-list"; acList.style.display = "none";
   document.body.appendChild(acList);
   var acInput = null, acPick = null, acItems = [], acIndex = -1;
+  // La liste s'ancre dans le DOM sous son champ au lieu d'etre posee en
+  // coordonnees calculees. C'est le navigateur qui la garde alignee, y compris
+  // quand le clavier du telephone redimensionne l'ecran. Avant, la liste etait
+  // en position fixed avec un left/top/width issus de getBoundingClientRect :
+  // elle prenait la largeur du champ (121 px sur un telephone, illisible) et
+  // atterrissait dans le coin haut gauche quand le champ n'etait pas encore
+  // dispose. Les deux defauts disparaissent en supprimant le calcul.
   function positionAc(input) {
-    var r = input.getBoundingClientRect();
-    acList.style.left = r.left + "px";
-    acList.style.top = (r.bottom + 4) + "px";
-    acList.style.width = r.width + "px";
+    var hote = input.closest(".searchbar") || input.closest(".field") || input.parentNode;
+    if (!hote) return;
+    hote.classList.add("ac-hote");
+    if (acList.parentNode !== hote) hote.appendChild(acList);
   }
   function renderAc() {
     if (!acInput) return;
@@ -7835,8 +7857,6 @@
       else if (e.key === "Escape") { hideAc(); }
     });
   }
-  window.addEventListener("scroll", function(){ if (acInput) positionAc(acInput); }, true);
-  window.addEventListener("resize", function(){ if (acInput) positionAc(acInput); });
 
   function crossCount(item) {
     // how many of the opposite kind want the same destination
@@ -8015,7 +8035,8 @@
       + '</div>';
 
     if (isMine) {
-      html += '<div class="self-note">&#128100; <b>C\'est ton annonce.</b><br>Les autres la voient et peuvent débloquer ton contact pour te joindre.</div>';
+      html += '<div class="self-note">&#128100; <b>C\'est ton annonce.</b><br>Les autres la voient et peuvent débloquer ton contact pour te joindre.</div>'
+        + '<button class="btn-danger" style="margin-top:12px" data-suppr="' + i.id + '">Retirer cette annonce</button>';
     } else if (isUnlocked) {
       html += contactHTML(unlocked[i.id]);
       if (isTrajet && !i.isDemo && me) {
@@ -8791,15 +8812,6 @@
                     "Merci, ta note est enregistrée.");
       return;
     }
-    var suppr = e.target.closest("[data-suppr]");
-    if (suppr) {
-      if (!window.confirm("Retirer cette annonce ?")) return;
-      rpc("supprimer_mon_annonce", { p_annonce: suppr.dataset.suppr })
-        .then(function(){ return loadAnnonces(); })
-        .then(function(){ dessinerProfil(); showToast("Annonce retirée."); })
-        .catch(function(){ showToast("Suppression impossible."); });
-      return;
-    }
     if (e.target.closest("#btnSupprCompte")) {
       if (!window.confirm("Supprimer ton compte, tes annonces, ton solde et tes déblocages ? C'est définitif.")) return;
       // la photo vit dans le stockage, pas dans la base : elle s'efface par son propre canal
@@ -8901,6 +8913,25 @@
   }
 
   // ---- Overlay helpers ----
+  // Suppression d'une annonce : delegation au niveau du document, pour que le
+  // bouton marche aussi bien depuis la feuille profil que depuis le detail de
+  // l'annonce. Avant, l'ecouteur vivait sur #profilSheet uniquement, donc la
+  // fonction serveur supprimer_mon_annonce n'etait joignable que par un chemin
+  // que personne ne trouvait.
+  document.addEventListener("click", function(e){
+    var suppr = e.target.closest("[data-suppr]");
+    if (!suppr) return;
+    if (!window.confirm("Retirer cette annonce ? Elle disparait pour tout le monde.")) return;
+    rpc("supprimer_mon_annonce", { p_annonce: suppr.dataset.suppr })
+      .then(function(){ return loadAnnonces(); })
+      .then(function(){
+        closeAll();
+        if (me) dessinerProfil();
+        showToast("Annonce retirée.");
+      })
+      .catch(function(){ showToast("Suppression impossible."); });
+  });
+
   function openOverlay(sel) { $(sel).classList.add("open"); document.body.style.overflow = "hidden"; }
   function closeOverlay(sel) { $(sel).classList.remove("open"); document.body.style.overflow = ""; }
   function closeAll() { [].forEach.call(document.querySelectorAll(".overlay"), function(o){ o.classList.remove("open"); }); document.body.style.overflow = ""; }
