@@ -343,6 +343,8 @@
     backdrop-filter: blur(2px); display: none; align-items: flex-end; justify-content: center;
   }
   .overlay.open { display: flex; animation: fade .2s; }
+  /* la feuille du colis s'ouvre par-dessus le profil, d'ou elle est appelee */
+  #colisOverlay { z-index: 55; }
   @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
   .sheet {
     background: var(--paper); width: 100%; max-width: 448px; max-height: 92vh; overflow-y: auto;
@@ -371,6 +373,7 @@
     width: 100%; background: var(--blue); color: #fff; border: 0; border-radius: 13px;
     padding: 15px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; margin-top: 6px;
   }
+  .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
   .btn-ghost {
     width: 100%; background: transparent; color: var(--ink-soft); border: 0;
     padding: 13px; font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit;
