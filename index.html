@@ -84,12 +84,18 @@
   }
 
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; overflow-x: hidden; overscroll-behavior-x: none; }
+  html, body { margin: 0; padding: 0; overscroll-behavior-x: none; }
   /* Le geste horizontal ne sert a rien ici : aucun conteneur de l'app ne defile
      lateralement. On le neutralise pour que l'ecran ne ballote plus de gauche a
      droite au moindre slide sur telephone. Le zoom a deux doigts reste permis,
-     on ne sacrifie pas l'accessibilite. */
-  body { touch-action: pan-y pinch-zoom; }
+     on ne sacrifie pas l'accessibilite.
+     ATTENTION, piege paye le 25/07 : ne PAS mettre overflow-x: hidden sur html.
+     Une valeur non-visible sur la racine fait de html son propre conteneur de
+     defilement, et le navigateur desactive alors le tirer-pour-rafraichir natif.
+     Le verrou horizontal tient tres bien avec touch-action et overscroll seuls,
+     et le clip de securite vit sur body, ou il ne change pas le defileur. */
+  html { touch-action: pan-y pinch-zoom; }
+  body { overflow-x: hidden; touch-action: pan-y pinch-zoom; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     color: var(--ink);
@@ -212,7 +218,7 @@
   .searchbar svg { width: 17px; height: 17px; color: var(--ink-soft); flex: 0 0 auto; }
   .searchbar input {
     flex: 1; border: 0; background: transparent; color: var(--ink);
-    font-size: 14.5px; font-family: inherit; outline: none; min-width: 0; width: 100%;
+    font-size: 16px; font-family: inherit; outline: none; min-width: 0; width: 100%;
     -webkit-appearance: none;
   }
   .searchbar input::-webkit-search-cancel-button { display: none; }
@@ -377,9 +383,11 @@
 
   .field { margin-bottom: 14px; }
   .field label { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); font-weight: 700; display: block; margin-bottom: 6px; }
-  .field input, .field select {
+  /* 16px est un plancher, pas un choix graphique : sous 16px, iOS zoome tout
+     seul au focus et l'ecran se met a glisser lateralement. */
+  .field input, .field select, .field textarea {
     width: 100%; border: 1px solid var(--line-strong); background: var(--card); color: var(--ink);
-    border-radius: 11px; padding: 12px 13px; font-size: 15px; font-family: inherit; -webkit-appearance: none;
+    border-radius: 11px; padding: 12px 13px; font-size: 16px; font-family: inherit; -webkit-appearance: none;
   }
   .field input:focus, .field select:focus { outline: 2px solid var(--blue); outline-offset: 0; border-color: var(--blue); }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -8946,9 +8954,28 @@
     clearTimeout(toastT); toastT = setTimeout(function(){ t.classList.remove("show"); }, 2200);
   }
 
+  // Une app posee sur l'ecran d'accueil reste "ouverte" des jours en mode
+  // autonome. Sans ceci, on regarde la liste telle qu'elle etait au premier
+  // chargement et on ne voit jamais les nouvelles publications. On recharge
+  // donc quand l'app revient au premier plan, avec un garde-fou de 5 secondes
+  // pour ne pas marteler le serveur si l'ecran clignote.
+  var dernierChargement = 0;
+  function rafraichir(force) {
+    var maintenant = Date.now();
+    if (!force && maintenant - dernierChargement < 5000) return;
+    dernierChargement = maintenant;
+    loadAnnonces();
+    if (me) { chargerTransports(); chargerNotifications(); }
+  }
+  document.addEventListener("visibilitychange", function(){
+    if (!document.hidden) rafraichir(false);
+  });
+  window.addEventListener("focus", function(){ rafraichir(false); });
+
   updateJetonChip();
   majCompte();
   render();
+  dernierChargement = Date.now();
   loadAnnonces();
   recupererSessionExterne()
     .then(function(){
