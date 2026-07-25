@@ -525,6 +525,48 @@
     border:1px solid var(--line-strong); background:var(--card); color:var(--ink);
     border-radius:10px; padding:8px 12px; font:inherit; font-size:13px; font-weight:600; cursor:pointer;
   }
+  /* ---- Transports (phase 3) ---- */
+  .tr-item { padding:13px 0; border-bottom:1px solid var(--line); }
+  .tr-item:last-child { border-bottom:0; }
+  .tr-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .tr-route { font-weight:700; font-size:14px; }
+  .tr-sub { font-size:12px; color:var(--ink-soft); margin-top:2px; }
+  .tr-statut {
+    font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.03em;
+    padding:3px 9px; border-radius:999px; white-space:nowrap;
+  }
+  .st-demande { background:var(--gold-soft); color:var(--gold); }
+  .st-accepte { background:var(--sunken); color:var(--ink-soft); }
+  .st-livre   { background:var(--green-soft); color:var(--green); }
+  .st-refuse, .st-annule { background:var(--sunken); color:var(--ink-soft); }
+  .tr-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .tr-btn {
+    border:1px solid var(--line-strong); background:var(--card); color:var(--ink);
+    border-radius:10px; padding:8px 12px; font:inherit; font-size:13px; font-weight:600; cursor:pointer;
+  }
+  .tr-btn.main { background:var(--blue); border-color:var(--blue); color:#fff; }
+  .tr-code {
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:26px; font-weight:800;
+    letter-spacing:.28em; text-align:center; padding:14px; margin-top:10px;
+    background:var(--gold-soft); color:var(--gold); border-radius:12px;
+  }
+  .tr-code-hint { font-size:12px; color:var(--ink-soft); text-align:center; margin-top:6px; }
+  .code-input {
+    width:100%; text-align:center; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:24px; letter-spacing:.28em; padding:12px; margin-top:10px;
+    border:1px solid var(--line-strong); border-radius:12px; background:var(--card); color:var(--ink);
+  }
+  .stars-pick { display:flex; gap:6px; justify-content:center; margin-top:10px; }
+  .star-btn {
+    border:0; background:none; font-size:27px; line-height:1; cursor:pointer;
+    color:var(--line-strong); padding:0 2px;
+  }
+  .star-btn.on { color:var(--gold); }
+  .me-dot {
+    display:inline-flex; align-items:center; justify-content:center; min-width:17px; height:17px;
+    padding:0 4px; border-radius:999px; background:var(--red); color:#fff;
+    font-size:10px; font-weight:800; margin-left:2px;
+  }
 </style>
 
 <div class="airmail"></div>
@@ -626,7 +668,9 @@
     <ol class="how-steps">
       <li><span class="how-num">1</span><div><b>Trouve ton trajet.</b> Cherche un voyageur sur ton itinéraire, ville de départ et ville d'arrivée, ou publie ta demande d'envoi.</div></li>
       <li><span class="how-num">2</span><div><b>Débloque le contact.</b> Un jeton révèle le nom et les coordonnées, pour organiser l'envoi ensemble.</div></li>
-      <li><span class="how-num">3</span><div><b>Comment obtenir des jetons.</b> Tu en reçois 3 en créant ton compte, tu en gagnes à chaque transport livré, et tu peux en acheter.</div></li>
+      <li><span class="how-num">3</span><div><b>Le colis voyage.</b> Tu demandes le transport, le voyageur accepte, et tu reçois un code à 4 chiffres. Tu ne le donnes qu'au moment où il te remet le colis à l'arrivée.</div></li>
+      <li><span class="how-num">4</span><div><b>Le code prouve la livraison.</b> Le voyageur le tape dans l'app : ça confirme la remise, vous vous notez, et il gagne 1 jeton. Sans code, pas de note et pas de récompense, donc pas de faux transports.</div></li>
+      <li><span class="how-num">5</span><div><b>Comment obtenir des jetons.</b> Tu en reçois 3 en créant ton compte, tu en gagnes 1 à chaque transport livré, et tu peux en acheter.</div></li>
     </ol>
     <p class="how-trust">Tu peux tout parcourir sans compte. Le compte n'est demandé qu'au moment de publier ou de débloquer un contact, pour que chacun sache à qui il parle.</p>
     <button type="button" class="btn-primary" data-close>Compris</button>
@@ -7298,6 +7342,7 @@
   // la liste des annonces se lit avec la cle publique, sans compte.
   var LS_SESSION = "valiz_session_v2";
   var userToken = null;
+  var mesTransports = [];    // rempli par chargerTransports (phase 3)
   var me = null;             // { id, email }
   var monProfil = null;      // { display_name, photo_url, nationalite, ... }
   var apresConnexion = null; // action mise en attente pendant l'inscription
@@ -7328,7 +7373,7 @@
     return s;
   }
   function clearSession() {
-    userToken = null; me = null; monProfil = null; balance = 0;
+    userToken = null; me = null; monProfil = null; balance = 0; mesTransports = [];
     try { localStorage.removeItem(LS_SESSION); } catch (e) {}
     unlocked = {}; save(LS_UNLOCK, unlocked);
   }
@@ -7364,6 +7409,7 @@
     }).then(jsonOuErreur)
       .then(saveSession)
       .then(chargerMonProfil)
+      .then(chargerTransports)
       .then(function(){ return loadBalance(); });
   }
   function seDeconnecter() {
@@ -7382,6 +7428,7 @@
     }).then(jsonOuErreur)
       .then(saveSession)
       .then(chargerMonProfil)
+      .then(chargerTransports)
       .then(function(){ return loadBalance(); })
       .catch(function(){ clearSession(); return null; });
   }
@@ -7428,11 +7475,13 @@
     }
     var nom = (monProfil && monProfil.display_name) || "Moi";
     var photo = monProfil && monProfil.photo_url;
-    b.title = "Mon profil";
+    var enAttente = actionsEnAttente();
+    b.title = enAttente ? enAttente + " action en attente" : "Mon profil";
     b.innerHTML = (photo
         ? '<img class="me-pic" src="' + esc(photo) + '" alt="">'
         : '<span class="me-ini" style="background:' + avatarColor(nom) + '">' + initials(nom) + '</span>')
-      + esc(nom.split(" ")[0]);
+      + esc(nom.split(" ")[0])
+      + (enAttente ? '<span class="me-dot">' + enAttente + '</span>' : '');
   }
 
   var $ = function (s) { return document.querySelector(s); };
@@ -7708,6 +7757,17 @@
       html += '<div class="self-note">&#128100; <b>C\'est ton annonce.</b><br>Les autres la voient et peuvent débloquer ton contact pour te joindre.</div>';
     } else if (isUnlocked) {
       html += contactHTML(unlocked[i.id]);
+      if (isTrajet && !i.isDemo && me) {
+        var tr = transportPourAnnonce(i.id);
+        if (!tr) {
+          html += '<button class="btn-primary" style="margin-top:12px" data-demander="' + i.id + '">'
+            + 'Demander ce transport</button>'
+            + '<p class="tr-code-hint">Le voyageur accepte, puis tape ton code à 4 chiffres à la remise du colis.</p>';
+        } else {
+          html += '<div class="self-note">Transport ' + LIBELLE_STATUT[tr.statut].toLowerCase()
+            + '. Suis-le depuis ton profil.</div>';
+        }
+      }
     } else if (i.isDemo) {
       html += ''
         + '<div class="locked-box">'
@@ -7756,6 +7816,8 @@
     if (s) { doSpend(s.dataset.spend); return; }
     var pk = e.target.closest("[data-pack]");
     if (pk) { doBuy(parseInt(pk.dataset.pack, 10)); return; }
+    var dem = e.target.closest("[data-demander]");
+    if (dem) { demanderTransport(dem.dataset.demander); return; }
     var bt = e.target.closest("[data-buy]");
     if (bt) { openBuy(bt.dataset.buy || null); return; }
     var c = e.target.closest("[data-close]");
@@ -7976,6 +8038,100 @@
       .then(function(){ btn.disabled = false; });
   });
 
+  // ---- Transports (phase 3) ---------------------------------------------
+  function chargerTransports() {
+    if (!me) { mesTransports = []; return Promise.resolve([]); }
+    return rpc("mes_transports", {})
+      .then(function(rows){ mesTransports = rows || []; majCompte(); return mesTransports; })
+      .catch(function(){ mesTransports = []; return []; });
+  }
+
+  // Nombre de choses qui attendent VRAIMENT une action de ma part.
+  function actionsEnAttente() {
+    if (!me) return 0;
+    return mesTransports.filter(function(t){
+      if (t.statut === "demande") return t.voyageur_id === me.id;      // a accepter ou refuser
+      if (t.statut === "accepte") return t.voyageur_id === me.id;      // code a saisir a l'arrivee
+      if (t.statut === "livre") {
+        return (t.expediteur_id === me.id && t.note_voyageur === null)
+            || (t.voyageur_id === me.id && t.note_expediteur === null); // note a donner
+      }
+      return false;
+    }).length;
+  }
+
+  function transportPourAnnonce(id) {
+    for (var i = 0; i < mesTransports.length; i++) {
+      if (mesTransports[i].annonce_id === id
+          && mesTransports[i].statut !== "refuse" && mesTransports[i].statut !== "annule") {
+        return mesTransports[i];
+      }
+    }
+    return null;
+  }
+
+  var LIBELLE_STATUT = {
+    demande: "En attente", accepte: "En cours", livre: "Livré",
+    refuse: "Refusé", annule: "Annulé"
+  };
+
+  function transportHTML(t) {
+    var jeSuisVoyageur = t.voyageur_id === me.id;
+    var autre = jeSuisVoyageur ? (t.expediteur_nom || "L'expéditeur") : (t.voyageur_nom || "Le voyageur");
+    var aNoter = t.statut === "livre" && (jeSuisVoyageur ? t.note_expediteur === null : t.note_voyageur === null);
+    var html = ''
+      + '<div class="tr-item" data-tr="' + t.id + '">'
+      +   '<div class="tr-top"><div>'
+      +     '<div class="tr-route">' + t.from_code + ' &#8594; ' + t.to_code + '</div>'
+      +     '<div class="tr-sub">' + fmtDate(t.date) + ' · ' + esc(autre) + ' · '
+      +       (jeSuisVoyageur ? "tu transportes" : "tu envoies") + '</div>'
+      +   '</div>'
+      +   '<span class="tr-statut st-' + t.statut + '">' + LIBELLE_STATUT[t.statut] + '</span>'
+      +   '</div>';
+
+    if (t.statut === "demande" && jeSuisVoyageur) {
+      html += '<div class="tr-actions">'
+        + '<button class="tr-btn main" data-accepter="' + t.id + '">Accepter</button>'
+        + '<button class="tr-btn" data-refuser="' + t.id + '">Refuser</button></div>';
+    } else if (t.statut === "demande") {
+      html += '<div class="tr-sub" style="margin-top:8px">En attente de la réponse du voyageur.</div>';
+    } else if (t.statut === "accepte" && jeSuisVoyageur) {
+      html += '<div class="tr-actions"><button class="tr-btn main" data-valider="' + t.id + '">'
+        + 'Saisir le code de livraison</button></div>';
+    } else if (t.statut === "accepte") {
+      html += '<div class="tr-actions"><button class="tr-btn main" data-code="' + t.id + '">'
+        + 'Voir mon code de livraison</button></div>';
+    }
+
+    if (aNoter) {
+      html += '<div class="tr-sub" style="margin-top:10px">Comment ça s\'est passé avec '
+        + esc(autre.split(" ")[0]) + ' ?</div><div class="stars-pick" data-noter="' + t.id + '">';
+      for (var n = 1; n <= 5; n++) html += '<button class="star-btn" data-note="' + n + '">&#9733;</button>';
+      html += '</div>';
+    } else if (t.statut === "livre") {
+      html += '<div class="tr-sub" style="margin-top:8px">&#10003; Livraison confirmée, note donnée.</div>';
+    }
+    return html + '</div>';
+  }
+
+  function agirTransport(promesse, messageOk) {
+    return promesse
+      .then(chargerTransports)
+      .then(function(){ dessinerProfil(); if (messageOk) showToast(messageOk); })
+      .catch(function(err){
+        var msg = (err && err.message) || "";
+        showToast(msg ? msg.charAt(0).toUpperCase() + msg.slice(1) : "Action impossible.");
+      });
+  }
+
+  function demanderTransport(id) {
+    exigeCompte(function(){
+      agirTransport(rpc("demander_transport", { p_annonce: id }),
+                    "Demande envoyée au voyageur.")
+        .then(function(){ closeAll(); ouvrirProfil(); });
+    });
+  }
+
   // ---- Profil -----------------------------------------------------------
   function moisAnnee(iso) {
     if (!iso) return "";
@@ -7988,7 +8144,9 @@
     if (!me) { ouvrirAuth("login"); return; }
     dessinerProfil();
     openOverlay("#profilOverlay");
-    chargerMonProfil().then(dessinerProfil);
+    chargerMonProfil()
+      .then(chargerTransports)
+      .then(dessinerProfil);
   }
 
   function dessinerProfil() {
@@ -8045,13 +8203,17 @@
       +   '</div>'
       +   '<button type="submit" class="btn-primary">Enregistrer</button>'
       + '</form>'
+      + '<div class="sect-title">Mes transports</div>'
+      + (mesTransports.length
+           ? mesTransports.map(transportHTML).join("")
+           : '<p class="prof-meta">Aucun transport en cours. Débloque le contact d\'un voyageur, puis demande-lui de prendre ton colis.</p>')
       + '<div class="sect-title">Mes annonces à venir</div>'
       + (avenir.length ? '<ul class="mini-list">' + avenir.map(ligne).join("") + '</ul>'
                        : '<p class="prof-meta">Aucune annonce à venir.</p>')
       + '<div class="sect-title">Passées</div>'
       + (passees.length ? '<ul class="mini-list">' + passees.map(ligne).join("") + '</ul>'
                         : '<p class="prof-meta">Rien pour le moment.</p>')
-      + '<p class="prof-meta" style="margin-top:16px">Les statuts « en cours » et « livré » arriveront avec la validation de livraison par code.</p>'
+      + '<p class="prof-meta" style="margin-top:16px">Un transport se règle en trois temps : tu demandes, le voyageur accepte, et il tape ton code à 4 chiffres au moment de te remettre le colis. C\'est ce code qui déclenche la note et le jeton gagné.</p>'
       + '<button type="button" class="btn-ghost" id="btnDeconnexion" style="margin-top:14px">Me déconnecter</button>'
       + '<button type="button" class="btn-ghost" data-close>Fermer</button>'
       + '<button type="button" class="danger-link" id="btnSupprCompte">Supprimer mon compte et mes données</button>';
@@ -8081,6 +8243,55 @@
       lecteur.readAsDataURL(file);
     });
   }
+
+  function afficherCode(code) {
+    $("#paySheet").innerHTML = ''
+      + '<div class="grabber"></div>'
+      + '<h2>Ton code de livraison</h2>'
+      + '<p class="sub">Donne-le au voyageur seulement au moment où il te remet le colis. C\'est ce qui prouve la livraison et déclenche la note.</p>'
+      + '<div class="tr-code">' + esc(code) + '</div>'
+      + '<p class="tr-code-hint">Ne le communique pas à l\'avance.</p>'
+      + '<button type="button" class="btn-ghost" data-close>Fermer</button>';
+    openOverlay("#payOverlay");
+  }
+
+  function ouvrirSaisieCode(idTransport) {
+    $("#paySheet").innerHTML = ''
+      + '<div class="grabber"></div>'
+      + '<h2>Valider la livraison</h2>'
+      + '<p class="sub">Demande son code à 4 chiffres à la personne qui reçoit le colis, au moment de la remise.</p>'
+      + '<input class="code-input" id="champCode" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off">'
+      + '<button class="btn-primary" style="margin-top:12px" id="btnValiderCode" data-tr="' + idTransport + '">Valider la livraison</button>'
+      + '<p class="tr-code-hint">5 essais maximum, ensuite il faudra repasser par l\'expéditeur.</p>'
+      + '<button type="button" class="btn-ghost" data-close>Annuler</button>';
+    openOverlay("#payOverlay");
+    setTimeout(function(){ var c = document.getElementById("champCode"); if (c) c.focus(); }, 120);
+  }
+
+  $("#paySheet").addEventListener("click", function(e){
+    var b = e.target.closest("#btnValiderCode"); if (!b) return;
+    var champ = document.getElementById("champCode");
+    var code = (champ && champ.value || "").trim();
+    if (code.length !== 4) { showToast("Le code fait 4 chiffres."); return; }
+    b.disabled = true;
+    rpc("valider_livraison", { p_transport: b.dataset.tr, p_code: code })
+      .then(function(ok){
+        if (ok !== true) { showToast("Code incorrect, vérifie avec l'expéditeur."); b.disabled = false; return; }
+        return chargerTransports()
+          .then(chargerMonProfil)
+          .then(loadBalance)
+          .then(loadAnnonces)
+          .then(function(){
+            $("#paySheet").innerHTML = successHTML("Livraison confirmée !", "Tu gagnes 1 jeton. Vous pouvez maintenant vous noter.");
+            setTimeout(function(){ closeOverlay("#payOverlay"); dessinerProfil(); openOverlay("#profilOverlay"); }, 1400);
+          });
+      })
+      .catch(function(err){
+        b.disabled = false;
+        var msg = (err && err.message) || "";
+        showToast(msg.indexOf("essais") >= 0 ? "Trop d'essais, repasse par l'expéditeur." : "Validation impossible.");
+      });
+  });
 
   // Efface le fichier lui-meme, que la suppression du compte en base ne peut pas atteindre.
   function supprimerMaPhoto() {
@@ -8124,6 +8335,38 @@
   $("#profilSheet").addEventListener("click", function(e){
     if (e.target.closest("#btnPhoto")) { document.getElementById("inputPhoto").click(); return; }
     if (e.target.closest("#btnDeconnexion")) { seDeconnecter(); return; }
+
+    var acc = e.target.closest("[data-accepter]");
+    if (acc) {
+      agirTransport(rpc("repondre_transport", { p_transport: acc.dataset.accepter, p_accepte: true }),
+                    "Transport accepté. L'expéditeur reçoit son code.");
+      return;
+    }
+    var ref = e.target.closest("[data-refuser]");
+    if (ref) {
+      if (!window.confirm("Refuser cette demande de transport ?")) return;
+      agirTransport(rpc("repondre_transport", { p_transport: ref.dataset.refuser, p_accepte: false }),
+                    "Demande refusée.");
+      return;
+    }
+    var vc = e.target.closest("[data-code]");
+    if (vc) {
+      rpc("mon_code", { p_transport: vc.dataset.code })
+        .then(function(code){ afficherCode(String(code).replace(/"/g, "")); })
+        .catch(function(){ showToast("Code indisponible."); });
+      return;
+    }
+    var val = e.target.closest("[data-valider]");
+    if (val) { ouvrirSaisieCode(val.dataset.valider); return; }
+
+    var etoile = e.target.closest(".star-btn");
+    if (etoile) {
+      var groupe = etoile.closest("[data-noter]");
+      agirTransport(rpc("noter", { p_transport: groupe.dataset.noter,
+                                   p_note: parseInt(etoile.dataset.note, 10) }),
+                    "Merci, ta note est enregistrée.");
+      return;
+    }
     var suppr = e.target.closest("[data-suppr]");
     if (suppr) {
       if (!window.confirm("Retirer cette annonce ?")) return;
