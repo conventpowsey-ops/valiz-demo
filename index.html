@@ -7526,19 +7526,6 @@
     return d.getDate() + " " + months[d.getMonth()];
   }
 
-  // Seed data
-  var SEED = [
-    { id:"t1", kind:"trajet", name:"Aline M.", from:"BRU", to:"FIH", date:"2026-08-12", kg:8, price:7, rating:4.9, trips:14, verified:true, phone:"+32 478 21 44 09", email:"aline.m@mail.be" },
-    { id:"t2", kind:"trajet", name:"Thierry K.", from:"BRU", to:"LBV", date:"2026-08-18", kg:5, price:null, rating:4.7, trips:6, verified:true, phone:"+32 471 88 12 30", email:"t.kombila@mail.be" },
-    { id:"t3", kind:"trajet", name:"Sarah D.", from:"BRU", to:"DKR", date:"2026-08-24", kg:15, price:6, rating:5.0, trips:3, verified:false, phone:"+32 493 55 71 62", email:"sarah.diop@mail.be" },
-    { id:"t4", kind:"trajet", name:"Moussa T.", from:"BRU", to:"DLA", date:"2026-08-29", kg:10, price:null, rating:4.8, trips:21, verified:true, phone:"+32 476 33 90 18", email:"moussa.t@mail.be" },
-    { id:"t5", kind:"trajet", name:"Jean-Marc B.", from:"FIH", to:"BRU", date:"2026-08-15", kg:7, price:null, rating:4.9, trips:11, verified:true, phone:"+243 81 402 77 51", email:"jm.baki@mail.cd" },
-    { id:"t6", kind:"trajet", name:"Fatou N.", from:"BRU", to:"ABJ", date:"2026-09-02", kg:6, price:null, rating:4.6, trips:9, verified:true, phone:"+32 484 12 66 07", email:"fatou.n@mail.be" },
-    { id:"d1", kind:"demande", name:"Grâce L.", from:"BRU", to:"FIH", date:"2026-08-20", kg:4, content:"Médicaments et vêtements pour ma mère", rating:4.8, trips:5, verified:true, phone:"+32 495 70 22 41", email:"grace.l@mail.be" },
-    { id:"d2", kind:"demande", name:"Patrick O.", from:"BRU", to:"LBV", date:"2026-08-25", kg:3, content:"Pièces détachées téléphone", rating:4.5, trips:2, verified:false, phone:"+32 470 91 55 13", email:"p.obame@mail.be" },
-    { id:"d3", kind:"demande", name:"Awa S.", from:"BRU", to:"DKR", date:"2026-08-30", kg:6, content:"Cadeaux famille et produits de soin", rating:5.0, trips:4, verified:true, phone:"+32 486 30 47 88", email:"awa.sow@mail.be" },
-    { id:"d4", kind:"demande", name:"Didier M.", from:"BRU", to:"FIH", date:"2026-08-22", kg:2, content:"Documents et un petit colis", rating:4.7, trips:7, verified:true, phone:"+32 479 62 10 35", email:"d.mukendi@mail.be" }
-  ];
 
   var LS_UNLOCK = "valiz_unlocked_v2";
   var TOKEN = { signup: 3, deliveredReward: 1, unlockCost: 1 };
@@ -7797,7 +7784,13 @@
 
   var loading = true;
   // le jeu d'exemple ne sert que si la base ne repond pas : il est marque comme demo
-  var items = SEED.map(function(s){ s.isDemo = true; return s; });
+  // La liste part VIDE et n'est remplie que par la base. Avant, elle partait
+  // d'un tableau de 6 fausses annonces code en dur, avec de faux numeros et de
+  // faux emails : elles s'affichaient au premier rendu, et surtout elles
+  // RESTAIENT affichees si le chargement echouait, puisque le catch ne touche
+  // pas a `items`. Supprimer les demos en base ne suffisait donc pas, le client
+  // portait son propre jeu de demonstration. Retire le 25/07 au soir.
+  var items = [];
   var unlocked = load(LS_UNLOCK, {});
   var balance = 0;
   var state = { seg: "trajets", from: "", to: "" };
@@ -9107,7 +9100,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-25-2004";
+  var VALIZ_VERSION = "2026-07-25-2017";
   function verifierVersion() {
     if (VALIZ_VERSION === "0") return;   // pas encore estampille, on ne derange pas
     fetch("version.json", { cache: "no-store" })
