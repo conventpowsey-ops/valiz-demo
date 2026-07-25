@@ -374,6 +374,21 @@
     padding: 15px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; margin-top: 6px;
   }
   .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+  .btn-google {
+    width: 100%; background: var(--card); color: var(--ink); border: 1px solid var(--line-strong);
+    border-radius: 13px; padding: 13px; font-size: 15px; font-weight: 700; cursor: pointer;
+    font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .g-logo {
+    display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px;
+    border-radius: 50%; background: #fff; color: #4285f4; font-weight: 800; font-size: 14px;
+    border: 1px solid var(--line);
+  }
+  .auth-sep {
+    display: flex; align-items: center; gap: 10px; margin: 16px 0 4px;
+    color: var(--ink-soft); font-size: 12px;
+  }
+  .auth-sep::before, .auth-sep::after { content: ""; flex: 1; height: 1px; background: var(--line); }
   .btn-ghost {
     width: 100%; background: transparent; color: var(--ink-soft); border: 0;
     padding: 13px; font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit;
@@ -793,6 +808,10 @@
     </div>
     <h2 id="authTitle">Créer mon compte</h2>
     <p class="sub" id="authSub">3 jetons offerts, de quoi débloquer tes 3 premiers contacts.</p>
+    <div id="googleBox" style="display:none">
+      <button type="button" class="btn-google" id="btnGoogle"><span class="g-logo">G</span> Continuer avec Google</button>
+      <div class="auth-sep"><span>ou avec un email</span></div>
+    </div>
     <p class="auth-why" id="authWhy">Ton compte garde ton solde et tes annonces, même si tu changes de téléphone. Ton email n'est jamais affiché aux autres.</p>
     <form id="authForm">
       <div class="field" id="authNameField">
@@ -807,6 +826,7 @@
         <label>Mot de passe</label>
         <input name="password" type="password" required minlength="10" placeholder="10 caractères minimum" autocomplete="current-password">
       </div>
+      <div id="captchaBox" style="margin-top:12px"></div>
       <button type="submit" class="btn-primary" id="authSubmit">Créer mon compte</button>
       <button type="button" class="btn-ghost" data-close>Plus tard</button>
     </form>
@@ -7490,11 +7510,101 @@
       .then(function(rows){ monProfil = (rows && rows[0]) || null; majCompte(); return monProfil; })
       .catch(function(){ monProfil = null; majCompte(); return null; });
   }
+  // ---- Connexion Google ---------------------------------------------------
+  // Meme principe que le captcha : l'interrupteur est ici. Tant qu'il est a
+  // faux, le bouton reste cache. On le passe a vrai le jour ou l'identifiant
+  // client Google est pose cote Supabase (scripts/valiz_auth_config.py
+  // google-brancher), jamais avant, sinon le bouton mene a une erreur.
+  var GOOGLE_ACTIF = false;
+
+  function urlRetour() {
+    return location.origin + location.pathname;
+  }
+
+  function connexionGoogle() {
+    location.href = SUPA_URL + "/auth/v1/authorize?provider=google&redirect_to="
+      + encodeURIComponent(urlRetour());
+  }
+
+  // Au retour de Google, la session arrive dans le fragment de l'adresse.
+  function recupererSessionExterne() {
+    var frag = (location.hash || "").replace(/^#/, "");
+    if (!frag || frag.indexOf("access_token=") === -1) return Promise.resolve(null);
+    var p = {};
+    frag.split("&").forEach(function(bout){
+      var kv = bout.split("=");
+      p[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1] || "");
+    });
+    history.replaceState(null, "", urlRetour());
+    if (!p.access_token) return Promise.resolve(null);
+    userToken = p.access_token;
+    return fetch(SUPA_URL + "/auth/v1/user", { headers: supaAuthHeaders() })
+      .then(jsonOuErreur)
+      .then(function(u){
+        return saveSession({ access_token: p.access_token, refresh_token: p.refresh_token, user: u });
+      })
+      .then(function(){
+        // premiere venue par Google : le profil et les 3 jetons n'existent pas encore
+        return chargerMonProfil().then(function(prof){
+          if (prof && prof.display_name) return null;
+          var prenom = "Voyageur";
+          return rpc("upsert_profil", { p_display_name: prenom })
+            .then(function(){ return rpc("reclamer_bonus", {}); })
+            .then(chargerMonProfil);
+        });
+      })
+      .catch(function(){ clearSession(); return null; });
+  }
+
+  // ---- Captcha Cloudflare Turnstile --------------------------------------
+  // Interrupteur unique : tant que la cle publique est vide, aucun script n'est
+  // charge et rien ne change pour l'utilisateur. Le jour ou le widget existe
+  // cote Cloudflare, on colle sa sitekey ici et le captcha s'allume, a condition
+  // qu'il soit aussi active cote Supabase (scripts/valiz_turnstile.py brancher).
+  var TURNSTILE_SITEKEY = "";
+  var captchaId = null, captchaJeton = "";
+
+  function captchaActif() { return !!TURNSTILE_SITEKEY; }
+
+  function chargerCaptcha() {
+    if (!captchaActif() || window.turnstile || document.getElementById("turnstileJs")) return;
+    var s = document.createElement("script");
+    s.id = "turnstileJs";
+    s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    s.async = true; s.defer = true;
+    document.head.appendChild(s);
+  }
+
+  function afficherCaptcha() {
+    if (!captchaActif()) return;
+    var boite = $("#captchaBox");
+    if (!boite) return;
+    if (!window.turnstile) { setTimeout(afficherCaptcha, 300); return; }
+    if (captchaId !== null) { window.turnstile.reset(captchaId); captchaJeton = ""; return; }
+    captchaId = window.turnstile.render(boite, {
+      sitekey: TURNSTILE_SITEKEY,
+      callback: function(t){ captchaJeton = t; },
+      "expired-callback": function(){ captchaJeton = ""; },
+      "error-callback": function(){ captchaJeton = ""; }
+    });
+  }
+
+  function reinitCaptcha() {
+    captchaJeton = "";
+    if (captchaActif() && window.turnstile && captchaId !== null) window.turnstile.reset(captchaId);
+  }
+
+  // Supabase attend le jeton du captcha dans gotrue_meta_security.
+  function avecCaptcha(corps) {
+    if (captchaActif() && captchaJeton) corps.gotrue_meta_security = { captcha_token: captchaJeton };
+    return corps;
+  }
+
   function creerCompte(email, motdepasse, prenom) {
     return fetch(SUPA_URL + "/auth/v1/signup", {
       method: "POST",
       headers: { "apikey": SUPA_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email, password: motdepasse })
+      body: JSON.stringify(avecCaptcha({ email: email, password: motdepasse }))
     }).then(jsonOuErreur)
       .then(function(j){
         if (!j || !j.access_token) {
@@ -7511,7 +7621,7 @@
     return fetch(SUPA_URL + "/auth/v1/token?grant_type=password", {
       method: "POST",
       headers: { "apikey": SUPA_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email, password: motdepasse })
+      body: JSON.stringify(avecCaptcha({ email: email, password: motdepasse }))
     }).then(jsonOuErreur)
       .then(saveSession)
       .then(chargerMonProfil)
@@ -8104,7 +8214,12 @@
     var pwd = document.querySelector('#authForm [name="password"]');
     if (pwd) { pwd.minLength = estInscription ? 10 : 1; pwd.placeholder = estInscription ? "10 caractères minimum" : "Ton mot de passe"; }
     openOverlay("#authOverlay");
+    $("#googleBox").style.display = GOOGLE_ACTIF ? "block" : "none";
+    chargerCaptcha();
+    afficherCaptcha();
   }
+
+  $("#btnGoogle").addEventListener("click", connexionGoogle);
 
   $("#authTabs").addEventListener("click", function(e){
     var b = e.target.closest("button"); if (!b) return;
@@ -8140,11 +8255,13 @@
           showToast("Email ou mot de passe incorrect.");
         } else if (/password/i.test(msg)) {
           showToast("Mot de passe trop court : 10 caractères minimum.");
+        } else if (/captcha/i.test(msg)) {
+          showToast("Vérification anti-robot à refaire.");
         } else {
           showToast("Connexion impossible, réessaie.");
         }
       })
-      .then(function(){ btn.disabled = false; });
+      .then(function(){ btn.disabled = false; reinitCaptcha(); });
   });
 
   // ---- Notifications (phase 4) ------------------------------------------
@@ -8740,7 +8857,15 @@
   majCompte();
   render();
   loadAnnonces();
-  authInit().then(function(){ majCompte(); updateJetonChip(); render(); });
+  recupererSessionExterne()
+    .then(function(){
+      if (me) {
+        // deja connecte par Google : on complete comme apres une connexion normale
+        return Promise.all([loadBalance(), chargerTransports(), chargerNotifications()]);
+      }
+      return authInit();
+    })
+    .then(function(){ majCompte(); updateJetonChip(); render(); });
 })();
 </script>
 
