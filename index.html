@@ -9562,8 +9562,12 @@
     if (!bloc) return;
     var lignes = (filleuls || []).map(function(f){
       var paye = !!f.bonus_verse_at;
+      // Depuis le 26/07/2026 le bonus tombe des le transport livre : si le filleul
+      // est actif et que rien n'est verse, la seule cause possible est le plafond
+      // mensuel. Autant le nommer plutot que de laisser un vague "en attente" qui
+      // faisait croire a une verification a venir.
       var etat = paye ? "1 jeton gagné"
-                      : (f.actif ? "en attente de vérification" : "pas encore de transport");
+                      : (f.actif ? "plafond de 5 par mois atteint" : "pas encore de transport");
       return '<div class="parrain-filleul"><span>' + esc(f.prenom || "Quelqu'un") + '</span>'
         + '<span class="parrain-etat' + (paye ? " paye" : "") + '">' + etat + '</span></div>';
     }).join("");
@@ -9572,8 +9576,8 @@
       + '<button type="button" class="btn-primary" data-partager="' + esc(lienParrainage(code)) + '">'
       +   'Partager mon lien</button>'
       + '<p class="prof-meta" style="margin:10px 0 0">Quand la personne que tu invites fait son '
-      +   'premier transport, tu gagnes 1 jeton. Le bonus tombe une fois son numéro vérifié par '
-      +   'SMS, bientôt disponible. Cinq par mois au maximum.</p>'
+      +   'premier transport, tu gagnes 1 jeton, versé aussitôt. '
+      +   'Cinq par mois au maximum.</p>'
       + (lignes ? '<div class="parrain-liste">' + lignes + '</div>' : '');
   }
 
@@ -10233,7 +10237,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-26-2045";
+  var VALIZ_VERSION = "2026-07-26-2104";
 
   // ---- Historique des ameliorations ---------------------------------------
   // Ecrit en langue d'utilisateur, pas en langue de developpeur : ce que la
