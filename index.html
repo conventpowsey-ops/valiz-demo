@@ -350,11 +350,18 @@
   .demand-note {
     padding: 0 16px 12px; font-size: 12.5px; color: var(--ink-soft); font-style: italic;
   }
+  /* Cette ligne annonce de la demande sur ta destination. Elle etait un simple
+     div : elle informait sans mener nulle part, et il fallait aller fouiller
+     dans les notifications pour savoir de qui il s'agissait (retour de Max,
+     26/07). C'est maintenant un bouton qui bascule sur la liste filtree. */
   .cross-hint {
-    padding: 8px 16px; font-size: 11.5px; color: var(--blue); font-weight: 600;
+    width: 100%; text-align: left; border: 0; font-family: inherit; cursor: pointer;
+    padding: 11px 16px; font-size: 11.5px; color: var(--blue); font-weight: 600;
     background: linear-gradient(0deg, rgba(28,86,160,.06), transparent);
-    display: flex; align-items: center; gap: 6px;
+    display: flex; align-items: center; gap: 6px; min-height: 44px;
   }
+  .cross-hint:hover { background: linear-gradient(0deg, rgba(28,86,160,.13), transparent); }
+  .cross-hint .cross-go { margin-left: auto; font-weight: 800; opacity: .75; }
 
   .empty { text-align: center; color: var(--ink-soft); padding: 60px 30px; }
   .empty .em { font-size: 34px; opacity: .5; }
@@ -8007,7 +8014,11 @@
   var unlocked = load(LS_UNLOCK, {});
   var balance = 0;
   var bonusGoogleAFeter = false;   // compte cree par Google : fete differee a la fin du demarrage
-  var state = { seg: "trajets", from: "", to: "" };
+  // masqueMiennes : vrai uniquement pendant la vue ouverte par la ligne
+  // "N personnes cherchent a envoyer vers X", pour que la liste montre
+  // exactement les N annonces comptees. Remis a faux des que l'utilisateur
+  // reprend la main (saisie, changement d'onglet, effacement).
+  var state = { seg: "trajets", from: "", to: "", masqueMiennes: false };
 
   function estAMoi(i) { return !!(me && i && i.userId && i.userId === me.id); }
 
@@ -8151,9 +8162,16 @@
   }
 
   function crossCount(item) {
-    // how many of the opposite kind want the same destination
+    // Combien d'annonces du type oppose visent la meme destination.
+    // On EXCLUT les siennes : sans ce filtre la ligne se comptait soi-meme.
+    // Constate le 26/07 sur la vraie base : Max avait un trajet BRU vers LBV
+    // et une demande BRU vers LBV, et son ecran lui annoncait donc "1 personne
+    // cherche a envoyer vers Libreville" en parlant de lui. Une ligne qui
+    // promet un inconnu et mene a soi-meme est pire que pas de ligne du tout.
     var opp = item.kind === "trajet" ? "demande" : "trajet";
-    return items.filter(function(i){ return i.kind===opp && i.to===item.to; }).length;
+    return items.filter(function(i){
+      return i.kind === opp && i.to === item.to && !estAMoi(i);
+    }).length;
   }
 
   // Une vraie annonce neuve n'a ni note ni trajets : on l'annonce honnetement.
@@ -8166,7 +8184,12 @@
     var isTrajet = i.kind === "trajet";
     var cross = crossCount(i);
     var crossTxt = "";
-    if (isTrajet && cross > 0) crossTxt = '<div class="cross-hint">&#128231; '+cross+' '+(cross>1?"personnes cherchent":"personne cherche")+' à envoyer vers '+AIRPORTS[i.to]+'</div>';
+    if (isTrajet && cross > 0) {
+      crossTxt = '<button type="button" class="cross-hint" data-croise="' + i.to + '">'
+        + '&#128231; <span>' + cross + ' ' + (cross > 1 ? "personnes cherchent" : "personne cherche")
+        + ' à envoyer vers ' + AIRPORTS[i.to] + '</span>'
+        + '<span class="cross-go" aria-hidden="true">&#8594;</span></button>';
+    }
     var isUnlocked = !!unlocked[i.id];
     var isMine = estAMoi(i);
     var revealed = isUnlocked || isMine || i.isDemo;
@@ -8231,7 +8254,15 @@
     $("#cntT").textContent = items.filter(function(i){return i.kind==="trajet";}).length;
     $("#cntD").textContent = items.filter(function(i){return i.kind==="demande";}).length;
     var kind = state.seg === "trajets" ? "trajet" : "demande";
-    var list = items.filter(function(i){ return i.kind===kind && matchLeg(i.from, state.from) && matchLeg(i.to, state.to); });
+    var list = items.filter(function(i){
+      // masqueMiennes n'est vrai que juste apres un clic sur la ligne
+      // "N personnes cherchent a envoyer vers X". Ce compte exclut les
+      // siennes, la liste qu'il ouvre doit donc les exclure aussi : sinon on
+      // annonce 1 personne et on en affiche 2, dont soi-meme. Hors de ce
+      // contexte le drapeau est faux, et chacun voit ses propres annonces.
+      if (state.masqueMiennes && estAMoi(i)) return false;
+      return i.kind===kind && matchLeg(i.from, state.from) && matchLeg(i.to, state.to);
+    });
     list.sort(function(a,b){ return a.date < b.date ? -1 : 1; });
     if (!list.length) {
       var hasSearch = state.from || state.to;
@@ -8249,12 +8280,15 @@
   $("#seg").addEventListener("click", function(e){
     var b = e.target.closest("button"); if (!b) return;
     state.seg = b.dataset.seg;
+    state.masqueMiennes = false;     // changer d'onglet sort de la vue croisement
     [].forEach.call(this.querySelectorAll("button"), function(x){ x.classList.toggle("active", x===b); });
     render();
   });
 
   var searchFrom = $("#searchFrom"), searchTo = $("#searchTo"), searchbarEl = document.querySelector(".searchbar");
   function onSearch(){
+    // Toute reprise de main de l'utilisateur sort de la vue "croisement"
+    state.masqueMiennes = false;
     state.from = searchFrom.value.trim();
     state.to = searchTo.value.trim();
     searchbarEl.classList.toggle("has-value", !!(searchFrom.value || searchTo.value));
@@ -8266,6 +8300,7 @@
   attachAutocomplete(searchTo, onSearch);
   $("#searchClear").addEventListener("click", function(){
     searchFrom.value = ""; searchTo.value = ""; state.from = ""; state.to = "";
+    state.masqueMiennes = false;     // effacer la recherche sort de la vue croisement
     searchbarEl.classList.remove("has-value");
     searchFrom.focus(); render();
   });
@@ -8284,9 +8319,36 @@
     // l'annonce. Il est teste AVANT .pass, sinon le clic remonterait a la carte.
     var qui = e.target.closest(".who[data-fiche]");
     if (qui) { ouvrirFichePublique(qui.dataset.fiche); return; }
+    // La ligne "N personnes cherchent a envoyer vers X" mene a ces personnes,
+    // pas au detail de l'annonce. Testee AVANT .pass, sinon le clic remonterait
+    // a la carte et ouvrirait le detail, comme pour le bloc identite au-dessus.
+    var croise = e.target.closest(".cross-hint[data-croise]");
+    if (croise) { montrerCroisement(croise.dataset.croise); return; }
     var card = e.target.closest(".pass"); if (!card) return;
     openDetail(card.dataset.id);
   });
+
+  // Bascule sur les annonces du type oppose qui visent cette destination.
+  // On ne remplit QUE l'arrivee, jamais le depart : le compte affiche sur la
+  // ligne se calcule sur la seule destination, et remplir aussi le depart
+  // montrerait moins de resultats que le nombre annonce. Le compte et la liste
+  // doivent dire la meme chose, sinon la ligne ment une seconde fois.
+  // Rien de neuf cote paiement : ces cartes portent deja le bouton Contact,
+  // qui passe par reveal_contact et debite un jeton, dans ce sens comme dans
+  // l'autre. Ouvrir le chemin suffit, il n'y a pas d'economie a inventer.
+  function montrerCroisement(codeArrivee) {
+    var oppose = state.seg === "trajets" ? "demandes" : "trajets";
+    state.seg = oppose;
+    [].forEach.call($("#seg").querySelectorAll("button"), function(b){
+      b.classList.toggle("active", b.dataset.seg === oppose);
+    });
+    searchFrom.value = "";
+    searchTo.value = (AIRPORTS[codeArrivee] ? codeArrivee + " · " + AIRPORTS[codeArrivee] : codeArrivee);
+    onSearch();                      // remet masqueMiennes a faux
+    state.masqueMiennes = true;      // ... puis on le pose pour CETTE vue
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
   listEl.addEventListener("keydown", function(e){
     if (e.key !== "Enter" && e.key !== " ") return;
     var card = e.target.closest(".pass"); if (!card) return;
@@ -9777,7 +9839,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-26-1259";
+  var VALIZ_VERSION = "2026-07-26-1336";
 
   // ---- Historique des ameliorations ---------------------------------------
   // Ecrit en langue d'utilisateur, pas en langue de developpeur : ce que la
@@ -9787,6 +9849,8 @@
   // fois publiee, sinon la pastille reapparaitrait chez tout le monde.
   var VALIZ_CHANGELOG = [
     { cle: "2026-07-26", date: "26 juillet 2026", points: [
+      "<b>« 1 personne cherche à envoyer vers Libreville » se clique.</b> Sur ton trajet, cette ligne t'emmène directement aux personnes concernées, avec de quoi les contacter. Avant, elle t'annonçait de la demande sans te dire qui.",
+      "<b>Elle ne te compte plus toi-même.</b> Si c'est ta propre demande qui vise ta destination, la ligne ne l'annonce plus comme quelqu'un d'autre.",
       "<b>Tes transports en cours s'affichent dès l'accueil.</b> Ton code de remise, la demande à accepter, la note à donner : tout est sous la recherche, au lieu d'être caché dans ton profil. Le plus urgent en premier.",
       "<b>Une croix pour fermer</b>, en haut à droite de chaque fenêtre. Plus besoin de descendre tout en bas pour trouver le bouton, et elle reste visible quand on fait défiler.",
       "<b>Cette page.</b> Le numéro de version et l'historique des améliorations sont maintenant lisibles depuis l'app, en haut de l'écran.",
