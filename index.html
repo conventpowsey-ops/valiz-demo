@@ -725,6 +725,22 @@
     border-radius:10px; padding:8px 12px; font:inherit; font-size:13px; font-weight:600; cursor:pointer;
   }
   /* ---- Transports (phase 3) ---- */
+  /* Bandeau d'accueil pour qui arrive sans compte.
+     Le visiteur qui vient du groupe WhatsApp tombait sur une liste de trajets
+     sans savoir ce qu'il gagne a s'inscrire ni si quelqu'un est deja la.
+     Les chiffres sont REELS et calcules depuis les annonces deja chargees :
+     aucune fonction serveur, aucun appel de plus, et ils se rafraichissent
+     tout seuls puisque la liste se recharge deja toutes les 25 secondes. */
+  .accroche {
+    margin: 0 16px 12px; padding: 14px 16px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--gold-soft), transparent 70%), var(--card);
+    border: 1px solid var(--line);
+  }
+  .accroche[hidden] { display: none; }
+  .accroche-titre { font-size: 14.5px; font-weight: 800; margin: 0 0 5px; line-height: 1.35; }
+  .accroche-sub { font-size: 12.5px; color: var(--ink-soft); margin: 0; line-height: 1.5; }
+  .accroche-sub b { color: var(--ink); font-weight: 700; }
+
   /* Bande des transports en cours, a l'accueil.
      Tout le cycle (voir son code, le saisir, noter) vivait dans la feuille
      profil, derriere une pastille de comptage : le geste du moment de la
@@ -940,6 +956,10 @@
   <!-- Bande des transports en cours. Vide et masquee tant qu'aucun transport
        n'est actif : elle ne prend la place de la liste que quand elle a
        quelque chose a dire. Remplie par renderBandeTransports(). -->
+  <!-- Accroche pour les visiteurs sans compte. Jamais affichee en meme temps
+       que la bande des transports : l'une s'adresse a qui ne connait pas
+       encore Valiz, l'autre a qui y a deja un colis en route. -->
+  <section class="accroche" id="accroche" hidden></section>
   <section class="bande-tr" id="bandeTransports" hidden></section>
   <main class="list" id="list"></main>
   <button class="fab" id="fab">＋ Publier</button>
@@ -8039,6 +8059,11 @@
     // notifications, profil, deconnexion). Un seul point de branchement, donc
     // aucun endroit ou l'on puisse oublier de la rafraichir.
     if (typeof renderBandeTransports === "function") renderBandeTransports();
+    // L'accroche depend de DEUX variables : l'etat de session (ici) et le
+    // contenu de la liste (dans render()). Les deux appels ne font donc pas
+    // doublon, chacun couvre une variable que l'autre ne voit pas. Sans celui
+    // d'ici, l'accroche resterait affichee apres une connexion.
+    if (typeof renderAccroche === "function") renderAccroche();
     var b = document.getElementById("meBtn"); if (!b) return;
     if (!me) {
       b.innerHTML = 'Se connecter';
@@ -8250,7 +8275,53 @@
     return html + '</div>';
   }
 
+  // ---- Accroche d'accueil, visiteurs sans compte --------------------------
+  // Trois choix assumes :
+  // 1. Rien pour les membres connectes. Ils n'ont pas besoin qu'on leur
+  //    explique le produit, et ils ont deja leur bande de transports.
+  // 2. Rien si aucune annonce a venir. Un bandeau qui annonce "0 voyageur"
+  //    fait fuir plus qu'il ne convainc : mieux vaut ne rien dire.
+  // 3. On nomme les vraies villes plutot qu'un total. "vers Libreville" parle
+  //    a quelqu'un, "4 destinations" ne parle a personne.
+  function renderAccroche() {
+    var el = document.getElementById("accroche");
+    if (!el) return;
+    if (me) { el.hidden = true; el.innerHTML = ""; return; }
+
+    var aujourdhui = new Date().toISOString().slice(0, 10);
+    var aVenir = items.filter(function(i){ return !i.isDemo && i.date >= aujourdhui; });
+    var trajets = aVenir.filter(function(i){ return i.kind === "trajet"; });
+    var demandes = aVenir.filter(function(i){ return i.kind === "demande"; });
+    if (!trajets.length && !demandes.length) { el.hidden = true; el.innerHTML = ""; return; }
+
+    // Destinations distinctes des trajets, nommees, les trois premieres
+    var villes = [];
+    trajets.forEach(function(i){
+      var v = AIRPORTS[i.to] || i.to;
+      if (villes.indexOf(v) === -1) villes.push(v);
+    });
+    var listeVilles = villes.slice(0, 3).join(", ")
+      + (villes.length > 3 ? " et " + (villes.length - 3) + " autre" + (villes.length - 3 > 1 ? "s" : "") : "");
+
+    var bouts = [];
+    if (trajets.length) {
+      bouts.push("<b>" + trajets.length + " voyageur" + (trajets.length > 1 ? "s partent" : " part")
+        + " bientôt</b>" + (listeVilles ? " vers " + esc(listeVilles) : ""));
+    }
+    if (demandes.length) {
+      bouts.push("<b>" + demandes.length + " personne" + (demandes.length > 1 ? "s cherchent" : " cherche")
+        + "</b> à faire voyager un colis");
+    }
+
+    el.innerHTML = '<p class="accroche-titre">Tu pars avec de la place ? Tu as un colis à envoyer ?</p>'
+      + '<p class="accroche-sub">' + bouts.join(" · ") + '. '
+      + 'Valiz met les deux en relation, le reste se décide entre vous.</p>';
+    el.hidden = false;
+  }
+
   function render() {
+    renderAccroche();   // ici, et nulle part ailleurs : render() tourne deja a
+                        // chaque chargement, chaque recherche et chaque bascule
     $("#cntT").textContent = items.filter(function(i){return i.kind==="trajet";}).length;
     $("#cntD").textContent = items.filter(function(i){return i.kind==="demande";}).length;
     var kind = state.seg === "trajets" ? "trajet" : "demande";
@@ -9839,7 +9910,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-26-1336";
+  var VALIZ_VERSION = "2026-07-26-1439";
 
   // ---- Historique des ameliorations ---------------------------------------
   // Ecrit en langue d'utilisateur, pas en langue de developpeur : ce que la
@@ -9849,6 +9920,7 @@
   // fois publiee, sinon la pastille reapparaitrait chez tout le monde.
   var VALIZ_CHANGELOG = [
     { cle: "2026-07-26", date: "26 juillet 2026", points: [
+      "<b>Une phrase d'accueil pour qui arrive sans compte</b>, avec les chiffres réels du moment : combien de voyageurs partent bientôt, vers où, et combien de personnes cherchent à envoyer. Elle disparaît dès que tu es connecté.",
       "<b>« 1 personne cherche à envoyer vers Libreville » se clique.</b> Sur ton trajet, cette ligne t'emmène directement aux personnes concernées, avec de quoi les contacter. Avant, elle t'annonçait de la demande sans te dire qui.",
       "<b>Elle ne te compte plus toi-même.</b> Si c'est ta propre demande qui vise ta destination, la ligne ne l'annonce plus comme quelqu'un d'autre.",
       "<b>Tes transports en cours s'affichent dès l'accueil.</b> Ton code de remise, la demande à accepter, la note à donner : tout est sous la recherche, au lieu d'être caché dans ton profil. Le plus urgent en premier.",
