@@ -1372,6 +1372,26 @@
   </div>
 </div>
 
+
+<!-- Rappel d'acceptation pour les comptes anterieurs aux textes legaux -->
+<div class="overlay" id="rappelCgvOverlay">
+  <div class="sheet">
+    <div class="grabber"></div>
+    <h2>Valiz a maintenant ses conditions</h2>
+    <p class="sub">Tu as créé ton compte avant qu'elles existent. Un coup d'oeil et c'est réglé.</p>
+    <div class="legal-corps">
+      <div class="legal-cle">Rien ne change à ce que tu fais déjà. On a simplement écrit noir sur blanc ce que Valiz fait, ce qu'elle ne fait pas, et ce qu'on garde de tes données.</div>
+      <p>En trois lignes :</p>
+      <ul>
+        <li><b>Valiz met en relation, Valiz ne transporte rien</b> et n'est partie à aucun accord entre deux membres.</li>
+        <li><b>On ne vend aucune donnée</b>, il n'y a ni traceur publicitaire ni outil de mesure d'audience.</li>
+        <li><b>Le colis se remet ouvert et s'inspecte</b>, et le voyageur répond personnellement de ce qu'il embarque.</li>
+      </ul>
+      <p>Le détail est ici : <button type="button" class="lien-legal-inline" id="lienCgv4">conditions générales</button>, <button type="button" class="lien-legal-inline" id="lienPrivacy4">politique de confidentialité</button>, <button type="button" class="lien-legal-inline" id="lienLegal4">mentions légales</button>.</p>
+    </div>
+    <button type="button" class="btn-primary" id="btnAccepterRappel" style="margin-top:18px">J'ai lu et j'accepte</button>
+  </div>
+</div>
 <!-- PROFIL sheet -->
 <div class="overlay" id="profilOverlay">
   <div class="sheet" id="profilSheet"></div>
@@ -8041,8 +8061,22 @@
     if (!me) { monProfil = null; return Promise.resolve(null); }
     // mon_profil renvoie aussi mon telephone, que la vue publique n'expose jamais
     return rpc("mon_profil", {})
-      .then(function(rows){ monProfil = (rows && rows[0]) || null; majCompte(); return monProfil; })
+      .then(function(rows){ monProfil = (rows && rows[0]) || null; majCompte(); verifierAcceptation(); return monProfil; })
       .catch(function(){ monProfil = null; majCompte(); return null; });
+  }
+  // Les comptes crees avant le 26/07/2026 n'ont jamais accepte de conditions,
+  // puisqu'il n'y en avait pas. On la leur demande une fois, a l'ouverture.
+  // La date vient du serveur (`cgu_acceptees_le`), jamais du stockage local :
+  // vider son cache ne doit pas reposer la question a quelqu'un qui a deja
+  // accepte, et changer d'appareil ne doit pas l'escamoter a quelqu'un qui ne
+  // l'a jamais fait.
+  var rappelCgvPose = false;
+  function verifierAcceptation() {
+    if (rappelCgvPose || !monProfil || monProfil.cgu_acceptees_le) return;
+    rappelCgvPose = true;
+    // On laisse le demarrage finir : une feuille qui s'ouvre pendant que la
+    // liste se peint arrive au milieu d'une animation.
+    setTimeout(function(){ openOverlay("#rappelCgvOverlay"); }, 700);
   }
   // ---- Connexion Google ---------------------------------------------------
   // Meme principe que le captcha : l'interrupteur est ici. Tant qu'il est a
@@ -9926,6 +9960,19 @@
       .then(function(){ dessinerProfil(); render(); showToast("Profil enregistré."); })
       .catch(function(){ showToast("Enregistrement impossible."); });
   });
+    // Le bouton n'attend pas la reponse du serveur pour fermer : l'acceptation
+    // est deja prise cote interface, et une lenteur reseau ne doit pas donner
+    // l'impression que le clic n'a pas marche. En cas d'echec, la feuille
+    // reviendra a la prochaine ouverture, ce qui est le bon comportement.
+    if ($("#btnAccepterRappel")) {
+      $("#btnAccepterRappel").addEventListener("click", function(){
+        closeOverlay("#rappelCgvOverlay");
+        showToast("Merci. Bon voyage.");
+        rpc("accepter_conditions", {})
+          .then(function(){ if (monProfil) monProfil.cgu_acceptees_le = new Date().toISOString(); })
+          .catch(function(){ rappelCgvPose = false; });
+      });
+    }
   $("#infoBtn").addEventListener("click", function(){ openOverlay("#howOverlay"); });
     // Textes legaux : le pied de page et les deux liens de la case d'acceptation
     // ouvrent les memes feuilles. La feuille legale s'ouvre PAR-DESSUS celle de
@@ -9934,6 +9981,8 @@
     [["#lienCgv", "#cgvOverlay"], ["#lienCgv2", "#cgvOverlay"],
      ["#lienPrivacy", "#privacyOverlay"], ["#lienPrivacy2", "#privacyOverlay"],
      ["#lienCgv3", "#cgvOverlay"], ["#lienPrivacy3", "#privacyOverlay"],
+     ["#lienCgv4", "#cgvOverlay"], ["#lienPrivacy4", "#privacyOverlay"],
+     ["#lienLegal4", "#legalOverlay"],
      ["#lienLegal", "#legalOverlay"]].forEach(function(paire){
       var el = $(paire[0]);
       if (el) el.addEventListener("click", function(){ openOverlay(paire[1]); });
@@ -10141,7 +10190,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-26-1834";
+  var VALIZ_VERSION = "2026-07-26-1851";
 
   // ---- Historique des ameliorations ---------------------------------------
   // Ecrit en langue d'utilisateur, pas en langue de developpeur : ce que la
