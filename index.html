@@ -398,7 +398,37 @@
   @media (min-width: 480px) { .sheet { border-radius: 22px; margin-bottom: 5vh; } }
   @keyframes slideUp { from { transform: translateY(40px); opacity: .6; } to { transform: none; opacity: 1; } }
   .grabber { width: 40px; height: 4px; border-radius: 2px; background: var(--line-strong); margin: 8px auto 14px; }
-  .sheet h2 { font-size: 18px; font-weight: 800; margin: 0 0 4px; letter-spacing: -.01em; }
+
+  /* Croix de fermeture, en haut a droite de chaque feuille.
+     Elle vit dans un enveloppeur SOEUR du contenu, jamais dans .sheet : trois
+     feuilles (detail, paiement, profil) sont entierement reecrites par
+     innerHTML, parfois pendant qu'elles sont ouvertes, ce qui effacerait un
+     bouton pose a l'interieur. L'enveloppeur est construit une seule fois au
+     chargement, pour toutes les feuilles : un seul mecanisme, pas huit copies.
+     En absolute sur l'enveloppeur, la croix ne bouge pas quand la feuille
+     defile : c'est tout l'interet, on n'a plus a descendre pour fermer. */
+  .sheet-wrap { position: relative; width: 100%; max-width: 448px; display: flex;
+    animation: slideUp .28s cubic-bezier(.2,.8,.2,1); }
+  /* L'animation d'ouverture passe sur l'enveloppeur : si elle restait sur la
+     feuille, la croix (posee sur l'enveloppeur, donc immobile) flotterait
+     a cote d'elle pendant les 280 ms de la montee. */
+  /* min-height : trois feuilles sont remplies par innerHTML. Si l'une s'ouvre
+     avant d'avoir son contenu, sans ce plancher la croix se retrouverait dans
+     le vide, hors de la feuille, et un clic dessus tomberait sur le fond. */
+  .sheet-wrap > .sheet { max-width: none; animation: none; min-height: 58px; }
+  .sheet-close {
+    position: absolute; top: 9px; right: 10px; z-index: 3;
+    width: 44px; height: 44px; padding: 0; border-radius: 50%;
+    display: grid; place-items: center; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card); color: var(--red);
+    font-size: 17px; line-height: 1; font-family: inherit;
+    box-shadow: 0 1px 3px rgba(0,0,0,.10);
+    transition: transform .12s, background .12s;
+  }
+  .sheet-close:hover { background: var(--sunken); }
+  .sheet-close:active { transform: scale(.92); }
+  /* Le titre s'arrete avant la croix, sinon un titre long passe dessous. */
+  .sheet h2 { font-size: 18px; font-weight: 800; margin: 0 0 4px; letter-spacing: -.01em; padding-right: 46px; }
   .sheet .sub { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 18px; }
 
   .field { margin-bottom: 14px; }
@@ -543,6 +573,29 @@
     background: var(--blue); color: #fff; font-weight: 800; font-size: 13px; margin-top: 1px;
   }
   .how-trust { font-size: 12.5px; color: var(--ink-soft); background: var(--gold-soft); border-radius: 10px; padding: 11px 13px; margin: 18px 0; }
+
+  /* Historique des ameliorations */
+  .news-list { display: flex; flex-direction: column; gap: 18px; margin: 4px 0 0; }
+  .news-item { border-left: 2px solid var(--line-strong); padding: 0 0 0 14px; }
+  .news-item.est-courante { border-left-color: var(--blue); }
+  .news-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 7px; }
+  .news-date { font-size: 13.5px; font-weight: 800; color: var(--ink); }
+  .news-tag {
+    font-size: 9.5px; letter-spacing: .07em; text-transform: uppercase; font-weight: 800;
+    color: #fff; background: var(--blue); border-radius: 999px; padding: 2px 7px;
+  }
+  .news-item ul { margin: 0; padding-left: 17px; display: flex; flex-direction: column; gap: 5px; }
+  .news-item li { font-size: 13px; line-height: 1.5; color: var(--ink-soft); }
+  .news-item li b { color: var(--ink); font-weight: 700; }
+  .news-version {
+    font-size: 11px; color: var(--ink-soft); text-align: center;
+    margin: 20px 0 0; padding-top: 14px; border-top: 1px solid var(--line);
+  }
+  /* Pastille sur le lien Nouveautes quand une entree n'a pas encore ete lue. */
+  .news-dot {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--red); margin-left: 4px; vertical-align: 2px;
+  }
   .mine-tag {
     font-size: 10px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700;
     padding: 3px 7px; border-radius: 6px; background: var(--blue); color: #fff;
@@ -823,7 +876,7 @@
         <button class="me-btn" id="meBtn" title="Mon compte"></button>
       </div>
     </div>
-    <p class="tagline">Le trajet de l'un, le colis de l'autre. <button type="button" class="how-link" id="infoBtn">Comment ça marche ?</button> · <a class="how-link" href="mailto:conventpowsey@gmail.com?subject=Valiz%20beta%20-%20retour&body=Ce%20qui%20coince%20ou%20me%20semble%20bizarre%20:%0A">Signaler un bug</a></p>
+    <p class="tagline">Le trajet de l'un, le colis de l'autre. <button type="button" class="how-link" id="infoBtn">Comment ça marche ?</button> · <button type="button" class="how-link" id="newsBtn">Nouveautés<span class="news-dot" id="newsDot" hidden></span></button> · <a class="how-link" href="mailto:conventpowsey@gmail.com?subject=Valiz%20beta%20-%20retour&body=Ce%20qui%20coince%20ou%20me%20semble%20bizarre%20:%0A">Signaler un bug</a></p>
     <div class="segmented" id="seg">
       <button data-seg="trajets" class="active">Voyageurs <span class="cnt" id="cntT"></span></button>
       <button data-seg="demandes">Expéditeurs <span class="cnt" id="cntD"></span></button>
@@ -936,6 +989,18 @@
       </ul>
     </div>
     <button type="button" class="btn-primary" data-close>Compris</button>
+  </div>
+</div>
+
+<!-- NEWS sheet : historique des ameliorations, rempli par renderNews() -->
+<div class="overlay" id="newsOverlay">
+  <div class="sheet">
+    <div class="grabber"></div>
+    <h2>Nouveautés</h2>
+    <p class="sub">Ce qui a changé dans l'app, de la plus récente à la plus ancienne.</p>
+    <div class="news-list" id="newsList"></div>
+    <p class="news-version" id="newsVersion"></p>
+    <button type="button" class="btn-primary" data-close style="margin-top:18px">Compris</button>
   </div>
 </div>
 
@@ -9489,7 +9554,7 @@
     var el = $(sel);
     el.classList.remove("open");
     el.style.zIndex = "";          // on ne laisse pas fuiter la valeur posee
-    document.body.style.overflow = "";
+    liberer();
   }
   function closeAll() {
     [].forEach.call(document.querySelectorAll(".overlay"), function(o){
@@ -9497,10 +9562,60 @@
     });
     document.body.style.overflow = "";
   }
+  // Le fond ne redevient defilable que s'il ne reste AUCUNE feuille ouverte.
+  // Sans ce test, fermer la feuille du colis (ouverte par-dessus le profil)
+  // relachait le defilement du fond alors que le profil etait encore la.
+  function liberer() {
+    if (!document.querySelector(".overlay.open")) document.body.style.overflow = "";
+  }
   [].forEach.call(document.querySelectorAll(".overlay"), function(o){
     o.addEventListener("click", function(e){ if (e.target === o) closeAll(); });
   });
-  document.addEventListener("keydown", function(e){ if (e.key === "Escape") closeAll(); });
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape") fermerDuDessus(); });
+
+  // ---- Croix de fermeture sur chaque feuille -----------------------------
+  // Avant, le seul moyen de fermer etait le bouton en pied de feuille : sur les
+  // feuilles longues (comment ca marche, profil, colis) il fallait defiler tout
+  // en bas a chaque fois. La croix est posee une fois pour toutes les feuilles,
+  // dans un enveloppeur SOEUR du contenu : les feuilles detail, paiement et
+  // profil sont reecrites par innerHTML, y compris pendant qu'elles sont
+  // ouvertes, donc un bouton pose dedans serait efface au premier rendu.
+  [].forEach.call(document.querySelectorAll(".overlay"), function(o){
+    var sheet = o.querySelector(".sheet");
+    if (!sheet || (sheet.parentNode && sheet.parentNode.classList.contains("sheet-wrap"))) return;
+    var wrap = document.createElement("div");
+    wrap.className = "sheet-wrap";
+    o.insertBefore(wrap, sheet);
+    wrap.appendChild(sheet);
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "sheet-close";
+    b.setAttribute("aria-label", "Fermer");
+    b.innerHTML = "&#10005;";
+    wrap.appendChild(b);
+  });
+
+  // La croix ferme la feuille qui la porte, pas toutes : quand la feuille du
+  // colis ou du code s'ouvre par-dessus le profil, on veut revenir au profil,
+  // pas se retrouver sur la liste d'annonces.
+  function fermerDuDessus() {
+    var ouvertes = [].slice.call(document.querySelectorAll(".overlay.open"));
+    if (!ouvertes.length) return;
+    var dessus = ouvertes.reduce(function(a, b){
+      return (parseInt(b.style.zIndex || 50, 10) >= parseInt(a.style.zIndex || 50, 10)) ? b : a;
+    });
+    dessus.classList.remove("open");
+    dessus.style.zIndex = "";
+    liberer();
+  }
+  document.addEventListener("click", function(e){
+    if (!e.target.closest(".sheet-close")) return;
+    var o = e.target.closest(".overlay");
+    if (!o) return;
+    o.classList.remove("open");
+    o.style.zIndex = "";
+    liberer();
+  });
 
   var toastT;
   function showToast(msg) {
@@ -9519,7 +9634,73 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-25-2218";
+  var VALIZ_VERSION = "2026-07-26-1227";
+
+  // ---- Historique des ameliorations ---------------------------------------
+  // Ecrit en langue d'utilisateur, pas en langue de developpeur : ce que la
+  // personne voit changer, jamais le nom du correctif. L'entree du haut est la
+  // plus recente. `cle` sert a savoir si l'utilisateur a deja lu la derniere
+  // entree (pastille rouge sur le lien Nouveautes), elle ne change jamais une
+  // fois publiee, sinon la pastille reapparaitrait chez tout le monde.
+  var VALIZ_CHANGELOG = [
+    { cle: "2026-07-26", date: "26 juillet 2026", points: [
+      "<b>Une croix pour fermer</b>, en haut à droite de chaque fenêtre. Plus besoin de descendre tout en bas pour trouver le bouton, et elle reste visible quand on fait défiler.",
+      "<b>Cette page.</b> Le numéro de version et l'historique des améliorations sont maintenant lisibles depuis l'app, en haut de l'écran.",
+      "Fermer une fenêtre ouverte par-dessus une autre ramène à celle du dessous, au lieu de tout refermer d'un coup."
+    ]},
+    { cle: "2026-07-25", date: "25 juillet 2026", points: [
+      "<b>Avis commentés</b> après chaque transport, révélés en même temps pour les deux personnes, comme sur Airbnb.",
+      "<b>Fiche publique</b> : en cliquant sur un nom, on voit ses notes et ce qu'on dit d'elle, jamais ses coordonnées.",
+      "<b>Parrainage</b> : ton code se partage, et tu gagnes 1 jeton quand ton filleul fait son premier transport.",
+      "<b>Connexion Google</b> et <b>protection anti-robots</b> invisible à l'inscription.",
+      "<b>Coup de main par défaut</b> : on ne demande rien. La participation aux frais reste possible, plafonnée à 8 euros par kilo.",
+      "L'app se signale quand une nouvelle version est sortie, et la liste des annonces se rafraîchit toute seule.",
+      "Beaucoup de confort sur téléphone : plus d'écran qui ballotte, boutons plus grands, suggestions de villes bien placées, icône et image de partage refaites."
+    ]},
+    { cle: "2026-07-24", date: "24 juillet 2026", points: [
+      "<b>Première version de Valiz.</b> Publier un trajet ou une demande, chercher, débloquer un contact avec un jeton, organiser l'envoi entre vous.",
+      "Le cycle complet du transport : demande, acceptation, <b>code à 4 chiffres</b> remis à l'arrivée, notation mutuelle.",
+      "3 jetons offerts à la création du compte, 1 jeton gagné à chaque remise confirmée."
+    ]}
+  ];
+
+  function renderNews() {
+    var l = $("#newsList");
+    if (!l) return;
+    l.innerHTML = VALIZ_CHANGELOG.map(function(e, i){
+      return '<div class="news-item' + (i === 0 ? ' est-courante' : '') + '">'
+        + '<div class="news-head"><span class="news-date">' + e.date + '</span>'
+        + (i === 0 ? '<span class="news-tag">Actuelle</span>' : '')
+        + '</div><ul><li>' + e.points.join('</li><li>') + '</li></ul></div>';
+    }).join('');
+    var v = $("#newsVersion");
+    if (v) v.textContent = "Version " + VALIZ_VERSION;
+  }
+
+  // Pastille rouge tant que la derniere entree n'a pas ete ouverte. On retient
+  // la cle lue, pas la version technique : la version change a chaque
+  // deploiement, meme quand rien de visible n'a bouge, et une pastille qui
+  // s'allume pour rien cesse d'etre lue.
+  var NEWS_CLE = "valiz_news_lue";
+  function derniereCle() {
+    return VALIZ_CHANGELOG.length ? VALIZ_CHANGELOG[0].cle : "";
+  }
+  function majPastilleNews() {
+    var d = $("#newsDot");
+    if (!d) return;
+    var lue = null;
+    try { lue = localStorage.getItem(NEWS_CLE); } catch (e) {}
+    d.hidden = (lue === derniereCle());
+  }
+  document.addEventListener("click", function(e){
+    if (!e.target.closest("#newsBtn")) return;
+    renderNews();
+    try { localStorage.setItem(NEWS_CLE, derniereCle()); } catch (err) {}
+    majPastilleNews();
+    openOverlay("#newsOverlay");
+  });
+  majPastilleNews();
+
   function verifierVersion() {
     if (VALIZ_VERSION === "0") return;   // pas encore estampille, on ne derange pas
     fetch("version.json", { cache: "no-store" })
