@@ -423,6 +423,33 @@
      avant d'avoir son contenu, sans ce plancher la croix se retrouverait dans
      le vide, hors de la feuille, et un clic dessus tomberait sur le fond. */
   .sheet-wrap > .sheet { max-width: none; animation: none; min-height: 58px; }
+    /* Textes legaux : pied de page et feuilles dediees */
+    .legal-foot { margin: 26px 14px 96px; text-align: center; font-size: 12.5px;
+      color: var(--muted); line-height: 1.9; }
+    .legal-foot button { background: none; border: 0; padding: 0; font: inherit;
+      color: var(--muted); text-decoration: underline; cursor: pointer; }
+    .legal-foot button:hover { color: var(--ink); }
+    .legal-foot .legal-sep { opacity: .5; margin: 0 6px; }
+    .legal-foot .legal-edit { display: block; margin-top: 8px; opacity: .75; }
+    .legal-corps { max-height: 62vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding-right: 4px; margin-top: 6px; }
+    .legal-corps h3 { font-size: 15px; margin: 20px 0 6px; }
+    .legal-corps h3:first-child { margin-top: 4px; }
+    .legal-corps p, .legal-corps li { font-size: 14px; line-height: 1.65; color: var(--ink); }
+    .legal-corps ul { margin: 8px 0 8px 18px; }
+    .legal-corps li { margin-bottom: 5px; }
+    .legal-corps .legal-cle { background: var(--sunken); border-radius: 12px;
+      padding: 12px 14px; margin: 12px 0; }
+    .legal-corps table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+    .legal-corps th, .legal-corps td { text-align: left; padding: 7px 8px;
+      border-bottom: 1px solid var(--sunken); vertical-align: top; }
+    .legal-corps th { font-weight: 600; }
+    .legal-maj { margin-top: 18px; font-size: 12.5px; color: var(--muted); }
+    .champ-accord { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; }
+    .champ-accord input { width: 20px; height: 20px; margin: 2px 0 0; flex: 0 0 auto; }
+    .champ-accord label { font-size: 13px; line-height: 1.5; color: var(--ink); }
+    .champ-accord button, .lien-legal-inline { background: none; border: 0; padding: 0;
+      font: inherit; color: var(--brand); text-decoration: underline; cursor: pointer; }
   .sheet-close {
     position: absolute; top: 9px; right: 10px; z-index: 3;
     width: 44px; height: 44px; padding: 0; border-radius: 50%;
@@ -1136,7 +1163,8 @@
     <p class="sub" id="authSub">3 jetons offerts, de quoi débloquer tes 3 premiers contacts.</p>
     <div id="googleBox" style="display:none">
       <button type="button" class="btn-google" id="btnGoogle"><svg class="g-logo" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg> Continuer avec Google</button>
-      <div class="auth-sep"><span>ou avec un email</span></div>
+      <p class="auth-why" id="accordGoogle" style="margin:8px 0 0">En continuant avec Google, tu acceptes les <button type="button" class="lien-legal-inline" id="lienCgv3">conditions générales</button> et la <button type="button" class="lien-legal-inline" id="lienPrivacy3">politique de confidentialité</button>.</p>
+<div class="auth-sep"><span>ou avec un email</span></div>
     </div>
     <p class="auth-why" id="authWhy">Ton compte garde ton solde et tes annonces, même si tu changes de téléphone. Ton email n'est jamais affiché aux autres.</p>
     <form id="authForm">
@@ -1166,10 +1194,181 @@
           </button>
         </div>
       </div>
-      <div id="captchaBox" style="margin-top:12px"></div>
+      <div class="champ-accord" id="champAccord">
+  <input type="checkbox" id="accordCgv" name="accord">
+  <label for="accordCgv">J'ai lu et j'accepte les <button type="button" id="lienCgv2">conditions générales</button> et la <button type="button" id="lienPrivacy2">politique de confidentialité</button>.</label>
+</div>
+<div id="captchaBox" style="margin-top:12px"></div>
       <button type="submit" class="btn-primary" id="authSubmit">Créer mon compte</button>
       <button type="button" class="btn-ghost" data-close>Plus tard</button>
     </form>
+  </div>
+</div>
+
+
+<!-- CGV sheet -->
+<div class="overlay" id="cgvOverlay">
+  <div class="sheet">
+    <div class="grabber"></div>
+    <h2>Conditions générales</h2>
+    <p class="sub">Ce qui nous lie, et surtout ce qui ne nous lie pas.</p>
+    <div class="legal-corps">
+      <div class="legal-cle"><b>Valiz met des gens en relation, Valiz ne transporte rien.</b> Nous ne sommes partie à aucun accord conclu entre deux membres. Ce que vous convenez ensemble vous engage, vous deux, et personne d'autre.</div>
+
+      <h3>1. Objet</h3>
+      <p>Valiz est un service de mise en relation entre des personnes voyageant avec de la place disponible dans leurs bagages, les voyageurs, et des personnes souhaitant faire acheminer un colis, les expéditeurs.</p>
+      <p>Valiz ne fournit aucun service de transport et n'agit pas en qualité de transporteur. Les membres agissent sous leur seule et entière responsabilité. Utiliser le service vaut acceptation des présentes conditions.</p>
+
+      <h3>2. Le compte</h3>
+      <p>L'inscription est réservée aux personnes majeures. Chaque membre s'engage à fournir des informations exactes, en particulier un numéro de téléphone qu'il contrôle réellement, puisque c'est le canal de contact entre membres.</p>
+      <p>Un membre ne peut détenir qu'un seul compte.</p>
+      <p>Le compte peut être supprimé à tout moment depuis le profil. Certaines données sont conservées après suppression, dans les conditions et pour les durées exposées dans la politique de confidentialité.</p>
+
+      <h3>3. Les jetons</h3>
+      <p>L'accès aux coordonnées d'un membre se fait par la dépense d'un jeton. Trois jetons sont offerts à la création du compte, et un jeton est gagné à chaque remise confirmée par code.</p>
+      <ul>
+        <li>Le jeton ne donne accès qu'à la mise en relation, jamais à une prestation de transport.</li>
+        <li>Il n'est ni remboursable, ni transférable, ni convertible en argent.</li>
+        <li>Il n'a de valeur qu'à l'intérieur du service.</li>
+      </ul>
+      <p><b>Une dépense de jeton est définitive.</b> Une fois les coordonnées révélées, elles ne peuvent plus être reprises, et le jeton n'est pas restitué si la mise en relation n'aboutit pas.</p>
+
+      <h3>4. Rendre service, pas gagner de l'argent</h3>
+      <p>C'est la clause dont dépend la nature même du service.</p>
+      <p><b>Le voyageur s'engage à ne tirer aucun bénéfice de l'utilisation de Valiz.</b> Il transporte dans la place dont il dispose déjà et, dans le cas général, ne demande rien.</p>
+      <p>Lorsqu'une dépense réelle est engagée pour l'occasion, un bagage supplémentaire par exemple, le voyageur peut demander une participation aux frais. Cette participation couvre des frais réellement engagés et rien de plus, elle est plafonnée à 8 euros par kilo, et elle ne peut en aucun cas dégager un profit.</p>
+      <p>Un voyageur qui demanderait davantage exercerait une activité de transport de marchandises pour compte d'autrui, ce que Valiz n'autorise pas.</p>
+
+      <h3>5. Le colis</h3>
+      <p><b>Le colis se remet ouvert et s'inspecte.</b> À chaque transport, l'expéditeur déclare le contenu de son colis et accepte la liste des objets interdits, le voyageur prend connaissance de cette déclaration, accepte la même liste et inspecte le colis avant de l'accepter. Ces deux acceptations sont horodatées et conservées. Un colis fermé se refuse, sans discussion.</p>
+      <p><b>Objets interdits, sans exception :</b> argent liquide, or et bijoux de valeur, armes, munitions et objets tranchants, stupéfiants, médicaments soumis à ordonnance en quantité, batteries au lithium et appareils à batterie non déclarés, et tout objet dont l'importation ou l'exportation est interdite ou soumise à autorisation.</p>
+      <div class="legal-cle"><b>Avertissement au voyageur, à lire attentivement.</b> À l'enregistrement, la compagnie aérienne demande si vous avez fait vos bagages vous-même et si quelqu'un vous a remis un objet à transporter. C'est vous, personnellement, qui répondez de ce que vous embarquez. Vous restez également responsable des règles de douane des pays de départ et d'arrivée, y compris pour un colis reçu d'un particulier, y compris s'il s'agit d'un cadeau.</div>
+
+      <h3>6. La remise et le code</h3>
+      <p>Quand un voyageur accepte un transport, l'expéditeur reçoit un code à quatre chiffres. Ce code ne doit être communiqué qu'au moment de la remise effective du colis. En le saisissant, le voyageur confirme que la remise a eu lieu.</p>
+      <p><b>Valiz n'est témoin de rien.</b> Elle enregistre la confirmation que les deux membres se donnent l'un à l'autre, et rien de plus. Elle ne garantit ni la livraison, ni le contenu, ni l'état du colis.</p>
+
+      <h3>7. Avis et réputation</h3>
+      <p>Après une remise confirmée, chaque membre peut noter l'autre et laisser un commentaire. Les commentaires sont révélés lorsque les deux ont été déposés, ou à défaut au bout de quatorze jours, ce qui empêche les avis de représailles. Un avis ne peut être déposé qu'après une remise confirmée par code, et il engage son auteur.</p>
+
+      <h3>8. Comportements interdits</h3>
+      <p>Sont notamment interdits : créer plusieurs comptes, publier de fausses annonces, contourner le service pour obtenir des coordonnées sans dépenser de jeton, utiliser Valiz pour une activité commerciale de transport, harceler un autre membre, ou publier un contenu illicite.</p>
+      <p>Valiz peut suspendre ou supprimer un compte en cas de manquement. Le membre concerné en est informé à son adresse email, et peut contester la décision en écrivant à <a href="mailto:info@printactif.be">info@printactif.be</a>.</p>
+
+      <h3>9. Responsabilité</h3>
+      <p>Valiz n'a aucun contrôle sur le comportement de ses membres, ni sur l'exactitude des informations qu'ils publient, ni sur le déroulement des transports convenus entre eux.</p>
+      <p>Valiz met à disposition un outil de mise en relation. Elle ne répond ni de la perte, ni du vol, ni de la détérioration d'un colis, ni du contenu de celui-ci, ni des conséquences douanières ou pénales d'un transport.</p>
+      <p>Aucune de ces stipulations n'a pour effet d'écarter la responsabilité de Valiz en cas de dol, de faute lourde, ou d'atteinte à la vie ou à l'intégrité physique d'une personne.</p>
+
+      <h3>10. Assurance</h3>
+      <p>Valiz ne fournit aucune assurance. Aucun colis transporté par l'intermédiaire du service n'est couvert. Il appartient à chaque membre de vérifier sa propre couverture.</p>
+
+      <h3>11. Modification des conditions</h3>
+      <p>Toute modification est signalée dans la rubrique Nouveautés de l'application, avec sa date. La poursuite de l'utilisation vaut acceptation.</p>
+
+      <h3>12. Droit applicable</h3>
+      <p>Droit belge. En cas de litige avec un membre consommateur, les tribunaux compétents sont ceux désignés par les règles protectrices applicables à son lieu de résidence. Vous pouvez également saisir la plateforme européenne de règlement en ligne des litiges.</p>
+
+      <p class="legal-maj">Version du 26 juillet 2026. Éditeur : PRINT ACTIF SRL, BE 0438.340.624.</p>
+    </div>
+    <button type="button" class="btn-primary" data-close style="margin-top:18px">Fermer</button>
+  </div>
+</div>
+
+<!-- Politique de confidentialite sheet -->
+<div class="overlay" id="privacyOverlay">
+  <div class="sheet">
+    <div class="grabber"></div>
+    <h2>Politique de confidentialité</h2>
+    <p class="sub">Ce qu'on collecte, pourquoi, et combien de temps.</p>
+    <div class="legal-corps">
+      <div class="legal-cle">Nous ne vendons aucune donnée, nous ne les transmettons à aucun annonceur, et l'application <b>n'utilise aucun cookie de mesure d'audience, aucun traceur publicitaire et aucun outil d'analyse comportementale.</b></div>
+
+      <h3>1. Qui traite vos données</h3>
+      <p>PRINT ACTIF SRL, qui édite le service sous le nom Valiz, est responsable du traitement des données décrites ci-dessous.</p>
+      <p>Avenue Van Volxem 14, 1190 Forest, Belgique. Numéro d'entreprise et de TVA : BE 0438.340.624.<br>
+      Contact pour toute question sur vos données : <a href="mailto:info@printactif.be">info@printactif.be</a></p>
+
+      <h3>2. Ce que nous collectons, et pourquoi</h3>
+      <p>Cette liste correspond exactement aux champs enregistrés par l'application.</p>
+      <p><b>À la création du compte :</b> votre adresse email, qui sert d'identifiant et reçoit les notifications, votre mot de passe, jamais stocké en clair, votre prénom affiché, votre numéro de téléphone, qui est le canal de contact réel entre membres, et votre date d'inscription. Facultatifs : votre photo, votre nationalité et votre ligne habituelle, qui ne servent qu'à la confiance entre membres et à ne vous prévenir que des annonces qui vous concernent.</p>
+      <p>Si vous vous connectez avec Google, nous recevons de Google votre email, votre prénom et votre photo. Rien d'autre, et nous n'accédons à aucun autre service Google.</p>
+      <p><b>Quand vous publiez une annonce :</b> ville de départ, ville d'arrivée, date, kilos, participation aux frais éventuelle, description, et le numéro que vous voulez utiliser pour ce trajet.</p>
+      <p>Sont publics : la ligne, la date, les kilos, la participation demandée, votre prénom, votre note et votre nombre de trajets. Ne le sont pas : votre numéro et votre email, révélés uniquement à un membre ayant dépensé un jeton.</p>
+      <p><b>Quand un transport a lieu :</b> la description du colis déclarée, l'horodatage de l'acceptation des règles sur les objets interdits, un code à quatre chiffres confirmant la remise, la date de la remise, et les notes et commentaires réciproques. Ces déclarations sont conservées parce qu'elles établissent que chacun savait ce qu'il transportait ou envoyait. C'est une garantie pour vous deux.</p>
+      <p><b>Le stockage local de votre navigateur</b> ne sert qu'à vous garder connecté et à mémoriser les annonces déjà débloquées.</p>
+
+      <h3>3. Qui d'autre voit vos données</h3>
+      <table>
+        <tr><th>Prestataire</th><th>Rôle</th><th>Ce qu'il voit</th></tr>
+        <tr><td>Supabase</td><td>Base de données, comptes, photos</td><td>L'ensemble des données du compte. Hébergement en Irlande, Union européenne</td></tr>
+        <tr><td>Resend</td><td>Envoi des emails, route par Amazon SES</td><td>Votre email et le contenu de la notification</td></tr>
+        <tr><td>Cloudflare</td><td>Protection anti-robot à l'inscription</td><td>Adresse IP et signaux du navigateur, le temps du contrôle</td></tr>
+        <tr><td>Google</td><td>Connexion, si vous l'utilisez</td><td>Le fait que vous vous connectiez à Valiz</td></tr>
+        <tr><td>GitHub Pages</td><td>Hébergement de la page</td><td>Adresse IP, dans ses journaux techniques</td></tr>
+      </table>
+      <p>Supabase Inc., Resend, Cloudflare, Google et GitHub sont des sociétés de droit américain. Les données de votre compte sont stockées en Irlande, dans l'Union européenne, et leurs transferts éventuels sont encadrés par les clauses contractuelles types de la Commission européenne.</p>
+      <div class="legal-cle"><b>Un membre qui dépense un jeton pour vous contacter obtient votre numéro et votre email de façon définitive.</b> Nous n'avons aucun moyen de les lui reprendre. Ne publiez pas un numéro que vous ne voulez pas voir circuler.</div>
+
+      <h3>4. Combien de temps nous les gardons</h3>
+      <table>
+        <tr><th>Donnée</th><th>Durée</th></tr>
+        <tr><td>Compte et profil</td><td>Tant que le compte existe, suppression immédiate à votre demande</td></tr>
+        <tr><td>Annonces passées</td><td>12 mois après la date du trajet</td></tr>
+        <tr><td>Transports, déclarations de contenu, acceptations des règles</td><td>5 ans, ce sont les traces qui protègent les deux parties en cas de litige</td></tr>
+        <tr><td>Avis et commentaires</td><td>Tant que le compte de la personne notée existe</td></tr>
+        <tr><td>Notifications</td><td>6 mois</td></tr>
+      </table>
+
+      <h3>5. Vos droits</h3>
+      <p>Vous pouvez à tout moment demander l'accès à vos données, leur correction, leur effacement, la limitation de leur traitement, leur portabilité, et vous opposer à un traitement fondé sur notre intérêt légitime. Écrivez à <a href="mailto:info@printactif.be">info@printactif.be</a>, nous répondons dans un délai d'un mois.</p>
+      <p><b>La suppression de votre compte est possible directement dans l'application</b>, dans votre profil. Elle efface votre compte, vos annonces, votre solde, vos déblocages et votre photo.</p>
+      <p>Une limite à connaître : elle n'efface pas les commentaires que vous avez laissés sur d'autres membres, ni les traces d'un transport déjà réalisé, conservées pour les raisons de litige exposées au point 4.</p>
+      <p>Si vous estimez que vos droits ne sont pas respectés, vous pouvez saisir l'Autorité de protection des données, rue de la Presse 35, 1000 Bruxelles.</p>
+
+      <h3>6. Sécurité</h3>
+      <p>Les accès à la base sont contrôlés ligne par ligne : un membre ne peut lire que ce qui le concerne. Les coordonnées ne sont accessibles qu'après un déblocage, contrôlé côté serveur et non côté navigateur. L'inscription est protégée contre les robots. Les mots de passe ne sont jamais lisibles, ni par nous ni par personne.</p>
+      <p><b>Nous ne prétendons pas être infaillibles.</b> Si vous découvrez une faille, écrivez-nous plutôt que de l'exploiter, nous la traiterons vite.</p>
+
+      <h3>7. Modifications</h3>
+      <p>Toute modification de cette politique est signalée dans la rubrique Nouveautés de l'application, avec sa date.</p>
+
+      <p class="legal-maj">Version du 26 juillet 2026.</p>
+    </div>
+    <button type="button" class="btn-primary" data-close style="margin-top:18px">Fermer</button>
+  </div>
+</div>
+
+<!-- Mentions legales sheet -->
+<div class="overlay" id="legalOverlay">
+  <div class="sheet">
+    <div class="grabber"></div>
+    <h2>Mentions légales</h2>
+    <p class="sub">Qui édite Valiz, et qui en répond.</p>
+    <div class="legal-corps">
+      <h3>Éditeur</h3>
+      <p><b>PRINT ACTIF SRL</b><br>Avenue Van Volxem 14, 1190 Forest, Belgique<br>Numero d'entreprise et de TVA : BE 0438.340.624<br>Contact : <a href="mailto:info@printactif.be">info@printactif.be</a></p>
+
+      <h3>Hébergement</h3>
+      <p>L'application est hébergée par <b>GitHub Pages</b>, GitHub Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États-Unis.</p>
+      <p>Les données des comptes et des annonces sont hébergées par <b>Supabase</b>, Supabase Inc., dans sa région irlandaise, au sein de l'Union européenne.</p>
+
+      <h3>Nature du service</h3>
+      <p>Valiz est un service de mise en relation entre des personnes voyageant avec de la place disponible dans leurs bagages et des personnes souhaitant faire acheminer un colis.</p>
+      <p><b>Valiz ne fournit aucun service de transport, n'agit pas en qualité de transporteur, et n'est partie à aucun accord conclu entre ses membres.</b> Les modalités du transport, y compris la remise, le contenu, l'emballage et toute participation aux frais, sont convenues directement entre les membres concernés.</p>
+
+      <h3>Propriété intellectuelle</h3>
+      <p>L'ensemble des éléments de l'application, y compris sa marque, son identité visuelle, ses textes et son code, sont la propriété de PRINT ACTIF SRL, sauf mention contraire.</p>
+
+      <h3>Signaler un contenu ou un comportement</h3>
+      <p>Tout contenu ou comportement contraire aux conditions générales peut être signalé à <a href="mailto:info@printactif.be">info@printactif.be</a>, qui est le point de contact de la plateforme. Nous examinons tout signalement dans un délai raisonnable et informons son auteur de la suite donnée.</p>
+
+      <h3>Droit applicable</h3>
+      <p>Les présentes mentions sont soumises au droit belge.</p>
+
+      <p class="legal-maj">Version du 26 juillet 2026.</p>
+    </div>
+    <button type="button" class="btn-primary" data-close style="margin-top:18px">Fermer</button>
   </div>
 </div>
 
@@ -1178,6 +1377,10 @@
   <div class="sheet" id="profilSheet"></div>
 </div>
 
+<div class="legal-foot">
+  <button type="button" id="lienCgv">Conditions générales</button><span class="legal-sep">·</span><button type="button" id="lienPrivacy">Confidentialité</button><span class="legal-sep">·</span><button type="button" id="lienLegal">Mentions légales</button>
+  <span class="legal-edit">Valiz est un service de PRINT ACTIF SRL, Bruxelles.</span>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -7897,6 +8100,7 @@
           if (photo) args.p_photo_url = photo;
           return rpc("upsert_profil", args)
             .then(function(){ return rpc("reclamer_bonus", {}); })
+            .then(function(){ return rpc("accepter_conditions", {}).catch(function(){}); })
             // Le compte vient de naitre par Google : ses 3 jetons se fetent
             // comme ceux d'une inscription au formulaire. Le drapeau attend la
             // fin du demarrage, sinon la pastille n'existe pas encore.
@@ -7973,6 +8177,7 @@
       })
       .then(function(){ return rpc("reclamer_bonus", {}); })
       .then(function(solde){ if (typeof solde === "number") setBalance(solde); })
+      .then(function(){ return rpc("accepter_conditions", {}).catch(function(){}); })
       .then(chargerMonProfil);
   }
   function seConnecter(email, motdepasse) {
@@ -8791,6 +8996,11 @@
     $("#authWhy").textContent = estInscription
       ? "Ton compte garde ton solde et tes annonces, même si tu changes de téléphone. Ton email n'est jamais affiché aux autres."
       : "Ton email n'est jamais affiché aux autres utilisateurs.";
+    // La case d'acceptation ne concerne que la creation d'un compte : quelqu'un
+    // qui se reconnecte a deja accepte, et la lui redemander serait faux.
+    majChampAccord();
+    // La mention sous le bouton Google suit la meme logique.
+    if ($("#accordGoogle")) $("#accordGoogle").style.display = estInscription ? "block" : "none";
     $("#authNameField").style.display = estInscription ? "block" : "none";
     $("#authPhoneField").style.display = estInscription ? "block" : "none";
     var nom = document.querySelector('#authForm [name="display_name"]');
@@ -8822,6 +9032,7 @@
     if (authMode === "signup" && nom.length < 2) { showToast("Ton prénom, pour que les autres sachent à qui ils parlent"); return; }
     if (authMode === "signup" && tel.replace(/[^0-9]/g, "").length < 8) { showToast("Ton numéro WhatsApp, c'est par là qu'on te joindra"); return; }
     if (authMode === "signup" && pwd.length < 10) { showToast("Mot de passe : 10 caractères minimum"); return; }
+      if (authMode === "signup" && !$("#accordCgv").checked) { showToast("Il faut accepter les conditions générales pour créer un compte"); return; }
     btn.disabled = true;
     var travail = authMode === "signup" ? creerCompte(email, pwd, nom, tel) : seConnecter(email, pwd);
     travail
@@ -9716,6 +9927,26 @@
       .catch(function(){ showToast("Enregistrement impossible."); });
   });
   $("#infoBtn").addEventListener("click", function(){ openOverlay("#howOverlay"); });
+    // Textes legaux : le pied de page et les deux liens de la case d'acceptation
+    // ouvrent les memes feuilles. La feuille legale s'ouvre PAR-DESSUS celle de
+    // l'inscription, sans la fermer : on ne veut pas qu'une lecture des
+    // conditions fasse perdre le formulaire a moitie rempli.
+    [["#lienCgv", "#cgvOverlay"], ["#lienCgv2", "#cgvOverlay"],
+     ["#lienPrivacy", "#privacyOverlay"], ["#lienPrivacy2", "#privacyOverlay"],
+     ["#lienCgv3", "#cgvOverlay"], ["#lienPrivacy3", "#privacyOverlay"],
+     ["#lienLegal", "#legalOverlay"]].forEach(function(paire){
+      var el = $(paire[0]);
+      if (el) el.addEventListener("click", function(){ openOverlay(paire[1]); });
+    });
+    // La case n'a de sens qu'a la creation d'un compte : quelqu'un qui se
+    // reconnecte a deja accepte, on ne le lui redemande pas.
+    function majChampAccord() {
+      var box = $("#champAccord");
+      if (!box) return;
+      box.style.display = authMode === "signup" ? "flex" : "none";
+      if (authMode !== "signup") $("#accordCgv").checked = false;
+    }
+
 
   $("#postForm").addEventListener("submit", function(e){
     e.preventDefault();
@@ -9910,7 +10141,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-26-1803";
+  var VALIZ_VERSION = "2026-07-26-1834";
 
   // ---- Historique des ameliorations ---------------------------------------
   // Ecrit en langue d'utilisateur, pas en langue de developpeur : ce que la
