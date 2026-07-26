@@ -710,6 +710,32 @@
     border-radius:10px; padding:8px 12px; font:inherit; font-size:13px; font-weight:600; cursor:pointer;
   }
   /* ---- Transports (phase 3) ---- */
+  /* Bande des transports en cours, a l'accueil.
+     Tout le cycle (voir son code, le saisir, noter) vivait dans la feuille
+     profil, derriere une pastille de comptage : le geste du moment de la
+     remise, a l'aeroport, etait a trois clics. La bande le remonte sous la
+     recherche, la ou l'oeil est deja, en REUTILISANT transportHTML() : le
+     meme rendu, donc les memes boutons, donc aucune logique en double. */
+  .bande-tr {
+    padding: 0 16px 4px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .bande-tr[hidden] { display: none; }
+  .bande-tr-titre {
+    font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+    font-weight: 800; color: var(--ink-soft); margin: 2px 0 0;
+  }
+  .bande-tr .tr-carte {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 12px 14px; box-shadow: var(--shadow);
+  }
+  /* La carte porte deja son cadre : la bordure de separation interne du
+     rendu partage n'a plus lieu d'etre ici. */
+  .bande-tr .tr-item { padding: 0; border-bottom: 0; }
+  .bande-tr .tr-carte.urgent { border-color: var(--blue); }
+  .bande-tr-plus {
+    font-size: 12px; color: var(--ink-soft); text-align: center; margin: 0;
+  }
+
   .tr-item { padding:13px 0; border-bottom:1px solid var(--line); }
   .tr-item:last-child { border-bottom:0; }
   .tr-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
@@ -724,9 +750,16 @@
   .st-livre   { background:var(--green-soft); color:var(--green); }
   .st-refuse, .st-annule { background:var(--sunken); color:var(--ink-soft); }
   .tr-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  /* min-height 44px : plancher tactile Apple, deja applique aux autres boutons
+     lors de la passe du 25/07. Ces boutons-la etaient restes a 33px parce
+     qu'ils vivaient au fond de la feuille profil. Maintenant qu'ils sont en
+     premiere ligne a l'accueil, et que ce sont les gestes les plus engageants
+     de l'app (accepter un transport, sortir son code), la mauvaise frappe n'est
+     plus acceptable. */
   .tr-btn {
     border:1px solid var(--line-strong); background:var(--card); color:var(--ink);
-    border-radius:10px; padding:8px 12px; font:inherit; font-size:13px; font-weight:600; cursor:pointer;
+    border-radius:10px; padding:8px 14px; min-height:44px; font:inherit; font-size:13px;
+    font-weight:600; cursor:pointer;
   }
   .tr-btn.main { background:var(--blue); border-color:var(--blue); color:#fff; }
   .tr-code {
@@ -889,6 +922,10 @@
       <button type="button" id="searchClear" aria-label="Effacer">&#10005;</button>
     </div>
   </header>
+  <!-- Bande des transports en cours. Vide et masquee tant qu'aucun transport
+       n'est actif : elle ne prend la place de la liste que quand elle a
+       quelque chose a dire. Remplie par renderBandeTransports(). -->
+  <section class="bande-tr" id="bandeTransports" hidden></section>
   <main class="list" id="list"></main>
   <button class="fab" id="fab">＋ Publier</button>
 </div>
@@ -7978,6 +8015,11 @@
     c.innerHTML = '<span class="coin"></span><b>' + balance + '</b> ' + (balance === 1 ? "jeton" : "jetons");
   }
   function majCompte() {
+    // La bande de l'accueil se redessine ici, et nulle part ailleurs : majCompte
+    // est deja appele apres CHAQUE changement d'etat (connexion, transports,
+    // notifications, profil, deconnexion). Un seul point de branchement, donc
+    // aucun endroit ou l'on puisse oublier de la rafraichir.
+    if (typeof renderBandeTransports === "function") renderBandeTransports();
     var b = document.getElementById("meBtn"); if (!b) return;
     if (!me) {
       b.innerHTML = 'Se connecter';
@@ -8826,7 +8868,13 @@
     return d.toISOString().slice(0, 10);
   }
 
-  function transportHTML(t) {
+  // compact : rendu pour la bande de l'accueil. Seule difference, le bloc de
+  // notation (5 etoiles, zone de texte, explication de la reciprocite) est
+  // remplace par un bouton qui ouvre le profil. Mesure faite avant de decider :
+  // ce bloc a lui seul poussait la liste d'annonces hors de l'ecran sur un
+  // telephone, et la notation n'a rien d'urgent (14 jours avant revelation),
+  // contrairement au code de remise qui se joue a l'aeroport.
+  function transportHTML(t, compact) {
     var jeSuisVoyageur = t.voyageur_id === me.id;
     var autre = jeSuisVoyageur ? (t.expediteur_nom || "L'expéditeur") : (t.voyageur_nom || "Le voyageur");
     var aNoter = t.statut === "livre" && (jeSuisVoyageur ? t.note_expediteur === null : t.note_voyageur === null);
@@ -8857,7 +8905,10 @@
         + 'Voir mon code de remise</button></div>';
     }
 
-    if (aNoter) {
+    if (aNoter && compact) {
+      html += '<div class="tr-actions"><button class="tr-btn main" data-ouvrir-profil="1">'
+        + 'Noter ' + esc(autre.split(" ")[0]) + '</button></div>';
+    } else if (aNoter) {
       var prenom = esc(autre.split(" ")[0]);
       html += '<div class="tr-sub" style="margin-top:10px">Comment ça s\'est passé avec '
         + prenom + ' ?</div><div class="stars-pick" data-noter="' + t.id + '">';
@@ -8883,6 +8934,59 @@
       }
     }
     return html + '</div>';
+  }
+
+  // ---- Bande des transports en cours, a l'accueil -------------------------
+  // Un transport est "en cours" tant qu'il n'est pas termine POUR MOI : une
+  // demande, un transport accepte, ou une livraison que je n'ai pas encore
+  // notee. Une fois note, il sort de la bande et va vivre dans le profil.
+  function transportsEnCours() {
+    if (!me) return [];
+    return mesTransports.filter(function(t){
+      if (t.statut === "demande" || t.statut === "accepte") return true;
+      if (t.statut === "livre") {
+        return t.voyageur_id === me.id ? t.note_expediteur === null : t.note_voyageur === null;
+      }
+      return false;   // refuse, annule, ou deja note des deux cotes
+    });
+  }
+
+  // Ordre d'urgence, pas ordre chronologique : ce qui se joue maintenant en
+  // premier. Le moment de la remise passe avant tout, c'est le seul geste qui
+  // se fait sous contrainte de temps, a l'aeroport.
+  function urgenceTransport(t) {
+    if (t.statut === "accepte") return 0;                                  // code a donner ou a saisir
+    if (t.statut === "demande" && t.voyageur_id === me.id) return 1;        // a accepter ou refuser
+    if (t.statut === "livre") return 2;                                    // a noter
+    return 3;                                                              // demande en attente de l'autre
+  }
+
+  var BANDE_MAX = 3;
+
+  function renderBandeTransports() {
+    var bande = document.getElementById("bandeTransports");
+    if (!bande) return;
+    var liste = transportsEnCours().sort(function(a, b){
+      return urgenceTransport(a) - urgenceTransport(b);
+    });
+    if (!liste.length) { bande.hidden = true; bande.innerHTML = ""; return; }
+
+    var montres = liste.slice(0, BANDE_MAX);
+    var html = '<p class="bande-tr-titre">'
+      + (liste.length === 1 ? "Ton transport en cours" : "Tes transports en cours")
+      + '</p>';
+    html += montres.map(function(t){
+      // meme rendu que dans le profil : memes boutons, meme comportement
+      return '<div class="tr-carte' + (urgenceTransport(t) === 0 ? ' urgent' : '') + '">'
+        + transportHTML(t, true) + '</div>';
+    }).join("");
+    if (liste.length > montres.length) {
+      html += '<p class="bande-tr-plus">+ ' + (liste.length - montres.length)
+        + ' autre' + (liste.length - montres.length > 1 ? 's' : '')
+        + ' dans ton profil.</p>';
+    }
+    bande.innerHTML = html;
+    bande.hidden = false;
   }
 
   function agirTransport(promesse, messageOk) {
@@ -9325,10 +9429,13 @@
       });
   }
 
-  $("#profilSheet").addEventListener("click", function(e){
-    if (e.target.closest("#btnPhoto")) { document.getElementById("inputPhoto").click(); return; }
-    if (e.target.closest("#btnDeconnexion")) { seDeconnecter(); return; }
-
+  // ---- Actions de transport, en delegation sur le document ----------------
+  // Ces boutons etaient branches sur #profilSheet, donc ils ne fonctionnaient
+  // QUE depuis la feuille profil. C'est exactement ce qui rendait le retrait
+  // d'annonce introuvable le 25/07, corrige de la meme facon. Au niveau du
+  // document, le meme bouton marche depuis la bande de l'accueil comme depuis
+  // le profil, sans qu'une ligne de logique soit ecrite deux fois.
+  document.addEventListener("click", function(e){
     var acc = e.target.closest("[data-accepter]");
     if (acc) {
       ouvrirColis("accept", acc.dataset.accepter, acc.dataset.contenu || "");
@@ -9351,6 +9458,50 @@
     var val = e.target.closest("[data-valider]");
     if (val) { ouvrirSaisieCode(val.dataset.valider); return; }
 
+    // La bande renvoie la notation au profil, ou elle a la place de s'afficher
+    if (e.target.closest("[data-ouvrir-profil]")) { ouvrirProfil(); return; }
+
+    // Choisir une etoile ne publie rien : on selectionne, on ecrit son
+    // commentaire, puis on envoie. Sans quoi il serait impossible d'en laisser un.
+    var etoile = e.target.closest(".star-btn");
+    if (etoile) {
+      var groupe = etoile.closest("[data-noter]");
+      var choisie = parseInt(etoile.dataset.note, 10);
+      groupe.dataset.choisie = choisie;
+      Array.prototype.forEach.call(groupe.querySelectorAll(".star-btn"), function (b, i) {
+        b.classList.toggle("on", i < choisie);
+      });
+      // Scope au bloc du transport, jamais au document : le meme transport
+      // peut etre rendu deux fois en meme temps (bande de l'accueil et feuille
+      // profil ouverte par-dessus), et un querySelector global activerait le
+      // bouton de l'autre copie.
+      var bloc = etoile.closest(".tr-item") || document;
+      var envoi = bloc.querySelector('[data-envoyer-avis="' + groupe.dataset.noter + '"]');
+      if (envoi) envoi.disabled = false;
+      return;
+    }
+
+    var envoyer = e.target.closest("[data-envoyer-avis]");
+    if (envoyer) {
+      var blocA = envoyer.closest(".tr-item") || document;
+      var trId = envoyer.dataset.envoyerAvis;
+      var grp = blocA.querySelector('[data-noter="' + trId + '"]');
+      var note = parseInt(grp && grp.dataset.choisie, 10);
+      if (!note) { showToast("Choisis d'abord une note."); return; }
+      var zone = blocA.querySelector('[data-avis-txt="' + trId + '"]');
+      var texte = zone && zone.value ? zone.value.trim() : "";
+      envoyer.disabled = true;
+      agirTransport(rpc("noter", { p_transport: trId, p_note: note,
+                                   p_commentaire: texte || null }),
+                    "Merci, ton avis est enregistré.");
+      return;
+    }
+  });
+
+  $("#profilSheet").addEventListener("click", function(e){
+    if (e.target.closest("#btnPhoto")) { document.getElementById("inputPhoto").click(); return; }
+    if (e.target.closest("#btnDeconnexion")) { seDeconnecter(); return; }
+
     var sw = e.target.closest("#switchNotif");
     if (sw) {
       var actif = !sw.classList.contains("on");
@@ -9367,35 +9518,10 @@
       return;
     }
 
-    // Choisir une etoile ne publie plus rien : on selectionne, on ecrit son
-    // commentaire, puis on envoie. Sans quoi il serait impossible d'en laisser un.
-    var etoile = e.target.closest(".star-btn");
-    if (etoile) {
-      var groupe = etoile.closest("[data-noter]");
-      var choisie = parseInt(etoile.dataset.note, 10);
-      groupe.dataset.choisie = choisie;
-      Array.prototype.forEach.call(groupe.querySelectorAll(".star-btn"), function (b, i) {
-        b.classList.toggle("on", i < choisie);
-      });
-      var envoi = document.querySelector('[data-envoyer-avis="' + groupe.dataset.noter + '"]');
-      if (envoi) envoi.disabled = false;
-      return;
-    }
+    // Les actions de transport (accepter, refuser, code, notation) ne vivent
+    // plus ici : elles sont en delegation sur le document, plus haut, pour
+    // servir aussi la bande de l'accueil. Un seul mecanisme.
 
-    var envoyer = e.target.closest("[data-envoyer-avis]");
-    if (envoyer) {
-      var trId = envoyer.dataset.envoyerAvis;
-      var grp = document.querySelector('[data-noter="' + trId + '"]');
-      var note = parseInt(grp && grp.dataset.choisie, 10);
-      if (!note) { showToast("Choisis d'abord une note."); return; }
-      var zone = document.querySelector('[data-avis-txt="' + trId + '"]');
-      var texte = zone && zone.value ? zone.value.trim() : "";
-      envoyer.disabled = true;
-      agirTransport(rpc("noter", { p_transport: trId, p_note: note,
-                                   p_commentaire: texte || null }),
-                    "Merci, ton avis est enregistré.");
-      return;
-    }
     if (e.target.closest("#btnSupprCompte")) {
       if (!window.confirm("Supprimer ton compte, tes annonces, ton solde et tes déblocages ? C'est définitif.")) return;
       // la photo vit dans le stockage, pas dans la base : elle s'efface par son propre canal
@@ -9634,7 +9760,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-26-1227";
+  var VALIZ_VERSION = "2026-07-26-1247";
 
   // ---- Historique des ameliorations ---------------------------------------
   // Ecrit en langue d'utilisateur, pas en langue de developpeur : ce que la
@@ -9644,6 +9770,7 @@
   // fois publiee, sinon la pastille reapparaitrait chez tout le monde.
   var VALIZ_CHANGELOG = [
     { cle: "2026-07-26", date: "26 juillet 2026", points: [
+      "<b>Tes transports en cours s'affichent dès l'accueil.</b> Ton code de remise, la demande à accepter, la note à donner : tout est sous la recherche, au lieu d'être caché dans ton profil. Le plus urgent en premier.",
       "<b>Une croix pour fermer</b>, en haut à droite de chaque fenêtre. Plus besoin de descendre tout en bas pour trouver le bouton, et elle reste visible quand on fait défiler.",
       "<b>Cette page.</b> Le numéro de version et l'historique des améliorations sont maintenant lisibles depuis l'app, en haut de l'écran.",
       "Fermer une fenêtre ouverte par-dessus une autre ramène à celle du dessous, au lieu de tout refermer d'un coup."
