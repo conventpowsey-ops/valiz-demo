@@ -8914,10 +8914,41 @@
       + '<p class="sub">'+sub+'</p>'
       + '<div class="packs">'+packsHTML+'</div>'
       + '<p class="earn-note">Tu gagnes aussi <b>'+TOKEN.deliveredReward+' '+(TOKEN.deliveredReward===1?"jeton":"jetons")+'</b> à chaque transport livré et confirmé. Publier une annonce ne rapporte rien, donc pas de fausses offres pour farmer.</p>'
-      + '<div class="fake-card"><div class="cc"></div><div class="num">•••• •••• •••• 4242 <small>· 08/28</small></div></div>'
+      + (paiementReel ? ''
+        : '<div class="fake-card"><div class="cc"></div><div class="num">•••• •••• •••• 4242 <small>· 08/28</small></div></div>')
       + '<button type="button" class="btn-ghost" data-close>Plus tard</button>'
-      + '<p class="pay-note">Paiement fictif · aucune carte n\'est débitée</p>';
+      + (paiementReel
+           ? '<p class="pay-note">Paiement sécurisé par Stripe · TVA comprise</p>'
+           : '<p class="fake-card-note pay-note">Paiement fictif · aucune carte n\'est débitée</p>');
     openOverlay("#payOverlay");
+  }
+
+  // Vrai tant que le serveur n'a pas dit le contraire. La valeur se corrige
+  // toute seule au premier appel, ce qui evite d'avoir un interrupteur ici EN
+  // PLUS de celui de la base : deux interrupteurs finissent toujours par se
+  // contredire.
+  var paiementReel = true;
+
+  // Envoie vers Stripe. Rend une promesse resolue a `false` si le paiement reel
+  // est eteint cote serveur, pour que l'appelant retombe sur la demonstration.
+  function ouvrirPaiementStripe(pack) {
+    if (!userToken) return Promise.resolve(false);
+    return fetch(SUPA_URL + "/functions/v1/creer-paiement", {
+      method: "POST",
+      headers: { "apikey": SUPA_KEY, "Authorization": "Bearer " + userToken,
+                 "Content-Type": "application/json" },
+      body: JSON.stringify({ pack: pack })
+    }).then(function(r){
+      if (r.status === 503) { paiementReel = false; return false; }
+      return r.json().then(function(j){
+        if (!r.ok || !j || !j.url) return Promise.reject(j || { message: "paiement indisponible" });
+        paiementReel = true;
+        // On quitte l'app pour Stripe. Le retour se fait sur ?paiement=ok, et
+        // c'est le webhook, pas ce retour, qui aura credite les jetons.
+        location.href = j.url;
+        return true;
+      });
+    });
   }
 
   function doBuy(idx) {
@@ -8925,6 +8956,17 @@
     exigeCompte(function(){
       $("#paySheet").innerHTML = successHTML("Paiement...", "Un instant.");
       openOverlay("#payOverlay");
+      ouvrirPaiementStripe(idx + 1).then(function(parti){
+        if (parti) return;          // le navigateur s'en va chez Stripe
+        acheterEnDemo(idx, p);      // paiement reel eteint : chemin historique
+      }).catch(function(err){
+        closeOverlay("#payOverlay");
+        showToast((err && (err.erreur || err.message)) || "Paiement impossible, réessaie.");
+      });
+    });
+  }
+
+  function acheterEnDemo(idx, p) {
       // le pack est designe par son numero : les tailles et les prix vivent sur le serveur
       rpc("acheter_pack", { p_pack: idx + 1 })
       .then(function(newBal){
@@ -8943,7 +8985,6 @@
           ? "Limite de 3 achats par jour atteinte."
           : "Achat impossible, réessaie.");
       });
-    });
   }
 
   // ---- Post form ----
@@ -10190,7 +10231,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-26-1851";
+  var VALIZ_VERSION = "2026-07-26-1936";
 
   // ---- Historique des ameliorations ---------------------------------------
   // Ecrit en langue d'utilisateur, pas en langue de developpeur : ce que la
@@ -10320,7 +10361,38 @@
     .then(function(){
       majCompte(); updateJetonChip(); render();
       if (bonusGoogleAFeter) { bonusGoogleAFeter = false; feterJetons(3); }
+      retourDePaiement();
     });
+
+  // Retour depuis Stripe. Le navigateur revient souvent AVANT le webhook : le
+  // solde n'est donc pas encore credite a la seconde ou l'on arrive. On relit
+  // quelques fois, en s'arretant des que ca bouge, plutot que d'afficher un
+  // solde faux ou de faire attendre pour rien.
+  function retourDePaiement() {
+    var etat = new URLSearchParams(location.search).get("paiement");
+    if (!etat) return;
+    // On nettoie l'adresse tout de suite : un rechargement ne doit pas rejouer
+    // le message, et le parametre n'a plus rien a faire dans un lien partage.
+    history.replaceState({}, "", location.pathname);
+    if (etat === "annule") { showToast("Paiement annulé, aucun jeton débité."); return; }
+    if (etat !== "ok" || !me) return;
+
+    var depart = balance, essais = 0;
+    showToast("Paiement reçu, on crédite tes jetons...");
+    (function attendre() {
+      loadBalance().then(function(nouveau){
+        if (nouveau > depart) {
+          feterJetons(nouveau - depart);
+          showToast("+" + (nouveau - depart) + " jetons. Nouveau solde : " + nouveau + ".");
+          return;
+        }
+        if (++essais < 6) return setTimeout(attendre, 1500);
+        // Six essais sur neuf secondes sans rien : on ne ment pas, on dit que
+        // c'est en cours plutot que d'affirmer un echec qui n'en est pas un.
+        showToast("Paiement enregistré. Tes jetons arrivent d'ici une minute.");
+      });
+    })();
+  }
 })();
 </script>
 
