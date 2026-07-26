@@ -427,6 +427,14 @@
   }
   .sheet-close:hover { background: var(--sunken); }
   .sheet-close:active { transform: scale(.92); }
+  /* Les barres d'onglets occupent toute la largeur en tete de feuille et
+     passaient donc SOUS la croix. Mesure faite avant correction : 30 px de la
+     zone de frappe de "Je cherche a envoyer" et de "J'ai deja un compte"
+     etaient masques, et viser le bord droit de l'onglet fermait la feuille au
+     lieu de changer d'onglet. Elles s'arretent maintenant avant la croix. */
+  .sheet-wrap > .sheet > .seg-form,
+  .sheet-wrap > .sheet > .auth-tabs { margin-right: 46px; }
+
   /* Le titre s'arrete avant la croix, sinon un titre long passe dessous. */
   .sheet h2 { font-size: 18px; font-weight: 800; margin: 0 0 4px; letter-spacing: -.01em; padding-right: 46px; }
   .sheet .sub { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 18px; }
@@ -8334,8 +8342,10 @@
             + 'Demander ce transport</button>'
             + '<p class="tr-code-hint">Tu déclares ce que tu envoies, le voyageur l\'inspecte ouvert avant d\'accepter. Vous convenez ensemble de la date et, s\'il y a des frais à partager, de la participation. Valiz garde seulement la trace de votre accord et te donne un code à remettre à l\'arrivée.</p>';
         } else {
+          // Le renvoi disait "depuis ton profil" : faux depuis que la bande
+          // existe, et c'est justement l'endroit ou l'on ne trouvait rien.
           html += '<div class="self-note">Transport ' + LIBELLE_STATUT[tr.statut].toLowerCase()
-            + '. Suis-le depuis ton profil.</div>';
+            + '. Tu le retrouves en haut de l\'accueil.</div>';
         }
       }
     } else if (i.isDemo) {
@@ -9270,7 +9280,14 @@
            : '<p class="prof-meta">Rien pour le moment.</p>')
       + '<div class="sect-title">Mes transports</div>'
       + (mesTransports.length
-           ? mesTransports.map(transportHTML).join("")
+           // PIEGE, paye le 26/07 : `map(transportHTML)` passe (element, index,
+           // tableau) au callback, donc l'index atterrissait dans le parametre
+           // `compact`. A partir du 2e transport, index >= 1 est vrai, et la
+           // feuille profil affichait le rendu compact : plus de formulaire de
+           // notation, juste un bouton qui rouvre le profil ou l'on est deja.
+           // Une fonction passee directement a map ne doit jamais avoir de
+           // second parametre optionnel.
+           ? mesTransports.map(function(t){ return transportHTML(t); }).join("")
            : '<p class="prof-meta">Aucun transport en cours. Débloque le contact d\'un voyageur, puis demande-lui de prendre ton colis.</p>')
       + '<div class="sect-title">Mes annonces à venir</div>'
       + (avenir.length ? '<ul class="mini-list">' + avenir.map(ligne).join("") + '</ul>'
@@ -9760,7 +9777,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-26-1247";
+  var VALIZ_VERSION = "2026-07-26-1259";
 
   // ---- Historique des ameliorations ---------------------------------------
   // Ecrit en langue d'utilisateur, pas en langue de developpeur : ce que la
