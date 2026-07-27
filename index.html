@@ -551,10 +551,6 @@
   .pay-amount { text-align: center; margin: 8px 0 20px; }
   .pay-amount .big { font-size: 40px; font-weight: 800; letter-spacing: -.02em; }
   .pay-amount .lbl { font-size: 12.5px; color: var(--ink-soft); margin-top: 4px; }
-  .fake-card { border: 1px solid var(--line-strong); border-radius: 13px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 8px; background: var(--card); }
-  .fake-card .cc { width: 34px; height: 22px; border-radius: 4px; background: linear-gradient(135deg, var(--blue), var(--blue-ink)); flex: 0 0 auto; }
-  .fake-card .num { font-size: 13px; letter-spacing: .05em; }
-  .fake-card .num small { color: var(--ink-soft); }
   .pay-note { font-size: 11px; color: var(--ink-soft); text-align: center; margin: 14px 0 4px; }
   .earn-note { font-size: 11.5px; color: var(--ink-soft); line-height: 1.5; background: var(--gold-soft); border-radius: 10px; padding: 10px 12px; margin: 0 0 14px; }
   .earn-note b { color: var(--gold); }
@@ -8810,7 +8806,7 @@
     html += '<button type="button" class="btn-ghost" data-close>Fermer</button>';
     html += '<p class="disclaimer">' + (i.isDemo
         ? 'Annonce de démonstration, contact fictif.'
-        : 'Beta. Les paiements de jetons ne sont pas encore réels.')
+        : 'Beta.')
       + ' Valiz met en relation : elle ne transporte pas, ne vend aucun transport et n\'est pas partie à votre accord. Le plus souvent, rien n\'est demandé. Quand une participation l\'est, elle couvre des frais réels, plafonnée à 8 €/kg, jamais un revenu. '
       + 'Chacun reste responsable de ce qu\'il envoie ou transporte, et des règles de douane.</p>';
     $("#detailSheet").innerHTML = html;
@@ -8984,23 +8980,19 @@
       + '<p class="sub">'+sub+'</p>'
       + '<div class="packs">'+packsHTML+'</div>'
       + '<p class="earn-note">Tu gagnes aussi <b>'+TOKEN.deliveredReward+' '+(TOKEN.deliveredReward===1?"jeton":"jetons")+'</b> à chaque transport livré et confirmé. Publier une annonce ne rapporte rien, donc pas de fausses offres pour farmer.</p>'
-      + (paiementReel ? ''
-        : '<div class="fake-card"><div class="cc"></div><div class="num">•••• •••• •••• 4242 <small>· 08/28</small></div></div>')
       + '<button type="button" class="btn-ghost" data-close>Plus tard</button>'
-      + (paiementReel
-           ? '<p class="pay-note">Paiement sécurisé par Stripe · TVA comprise</p>'
-           : '<p class="fake-card-note pay-note">Paiement fictif · aucune carte n\'est débitée</p>');
+      + '<p class="pay-note">Paiement sécurisé par Stripe · TVA comprise</p>';
     openOverlay("#payOverlay");
   }
 
-  // Vrai tant que le serveur n'a pas dit le contraire. La valeur se corrige
-  // toute seule au premier appel, ce qui evite d'avoir un interrupteur ici EN
-  // PLUS de celui de la base : deux interrupteurs finissent toujours par se
-  // contredire.
-  var paiementReel = true;
-
-  // Envoie vers Stripe. Rend une promesse resolue a `false` si le paiement reel
-  // est eteint cote serveur, pour que l'appelant retombe sur la demonstration.
+  // Envoie vers Stripe. Rend une promesse resolue a `false` quand le paiement
+  // est eteint cote serveur (arret d'urgence) ou qu'aucune session n'est
+  // ouverte, pour que l'appelant le dise honnetement.
+  //
+  // Il n'y a plus de chemin de repli depuis le 27/07 : `acheter_pack` creditait
+  // des jetons sans paiement, ce qui etait un mode demonstration tant que les
+  // jetons ne valaient rien, et une porte ouverte des qu'ils ont eu un prix.
+  // Eteindre la vente doit arreter la vente, jamais la rendre gratuite.
   function ouvrirPaiementStripe(pack) {
     if (!userToken) return Promise.resolve(false);
     return fetch(SUPA_URL + "/functions/v1/creer-paiement", {
@@ -9009,10 +9001,9 @@
                  "Content-Type": "application/json" },
       body: JSON.stringify({ pack: pack })
     }).then(function(r){
-      if (r.status === 503) { paiementReel = false; return false; }
+      if (r.status === 503) return false;
       return r.json().then(function(j){
         if (!r.ok || !j || !j.url) return Promise.reject(j || { message: "paiement indisponible" });
-        paiementReel = true;
         // On quitte l'app pour Stripe. Le retour se fait sur ?paiement=ok, et
         // c'est le webhook, pas ce retour, qui aura credite les jetons.
         location.href = j.url;
@@ -9022,39 +9013,20 @@
   }
 
   function doBuy(idx) {
-    var p = PACKS[idx]; if (!p) return;
+    if (!PACKS[idx]) return;
     exigeCompte(function(){
       $("#paySheet").innerHTML = successHTML("Paiement...", "Un instant.");
       openOverlay("#payOverlay");
       ouvrirPaiementStripe(idx + 1).then(function(parti){
         if (parti) return;          // le navigateur s'en va chez Stripe
-        acheterEnDemo(idx, p);      // paiement reel eteint : chemin historique
+        // Vente eteinte cote serveur. On le dit, on ne credite rien.
+        closeOverlay("#payOverlay");
+        showToast("Paiement momentanément indisponible, réessaie dans un instant.");
       }).catch(function(err){
         closeOverlay("#payOverlay");
         showToast((err && (err.erreur || err.message)) || "Paiement impossible, réessaie.");
       });
     });
-  }
-
-  function acheterEnDemo(idx, p) {
-      // le pack est designe par son numero : les tailles et les prix vivent sur le serveur
-      rpc("acheter_pack", { p_pack: idx + 1 })
-      .then(function(newBal){
-        if (typeof newBal === "number") setBalance(newBal); else loadBalance();
-        var rid = pendingUnlockId; pendingUnlockId = null;
-        $("#paySheet").innerHTML = successHTML("+"+p.t+" jetons", "Nouveau solde : "+balance+" jetons.");
-        feterJetons(p.t);
-        // 1400 ms et non 900 : sous 900, l'ecran se fermait avant la fin de la
-        // salve, on payait pour ne rien voir. Meme duree que la remise confirmee.
-        setTimeout(function(){ closeOverlay("#payOverlay"); if (rid) openSpend(rid); else render(); }, 1400);
-      })
-      .catch(function(err){
-        closeOverlay("#payOverlay");
-        var msg = (err && err.message) || "";
-        showToast(msg.indexOf("limite") >= 0
-          ? "Limite de 3 achats par jour atteinte."
-          : "Achat impossible, réessaie.");
-      });
   }
 
   // ---- Post form ----
@@ -10344,7 +10316,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-27-0027";
+  var VALIZ_VERSION = "2026-07-27-0845";
 
   // ---- Historique des ameliorations ---------------------------------------
   // Ecrit en langue d'utilisateur, pas en langue de developpeur : ce que la
