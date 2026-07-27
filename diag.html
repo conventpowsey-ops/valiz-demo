@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Valiz, mesure du rognage</title>
+<style>
+  /* Cette page reproduit EXACTEMENT la mecanique des feuilles de l'app, avec
+     les memes regles CSS, pour mesurer sur le vrai telephone ce qu'aucun
+     navigateur de bureau ne reproduit : la barre d'adresse retractable de
+     Chrome Android. Elle ne touche pas a l'app et se supprime apres usage. */
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font: 14px/1.5 system-ui, -apple-system, sans-serif;
+    background: #F5F2EA; color: #1A1D21; padding: 16px 16px 400px;
+  }
+  h1 { font-size: 17px; margin: 0 0 4px; }
+  .aide { color: #5A6270; margin: 0 0 16px; }
+  .mesures { background: #fff; border: 1px solid #E2DDD1; border-radius: 12px; padding: 12px; }
+  .mesures div { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; border-bottom: 1px solid #F0EDE4; }
+  .mesures div:last-child { border-bottom: 0; }
+  .mesures b { font-variant-numeric: tabular-nums; }
+  .alerte { background: #FDECEC; border-color: #E9B7B7; }
+  .ok { background: #E8F5EC; border-color: #A9D6B8; }
+  .boutons { display: flex; gap: 8px; margin: 16px 0; }
+  button {
+    flex: 1; padding: 14px 10px; border-radius: 12px; border: 0; font-size: 14px;
+    font-weight: 700; color: #fff; background: #1C56A0;
+  }
+  button.b { background: #0F7A3D; }
+
+  /* Les regles ci-dessous sont COPIEES de l'app, sans rien changer. */
+  .overlay {
+    position: fixed; inset: 0; z-index: 50; background: rgba(10,15,20,.5);
+    display: none; align-items: flex-end; justify-content: center;
+  }
+  .overlay.open { display: flex; }
+  .sheet {
+    background: #F5F2EA; width: 100%; max-width: 448px;
+    max-height: 92vh;                 /* <= la regle actuelle de l'app */
+    overflow-y: auto; overflow-x: hidden;
+    border-radius: 22px 22px 0 0; padding: 8px 20px 28px;
+  }
+  /* La variante corrigee : dvh suit la zone reellement visible, et la
+     safe-area protege du bord physique. */
+  #corrige .sheet {
+    max-height: calc(92dvh - env(safe-area-inset-top, 0px));
+    padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  }
+  .repere {
+    background: #C62828; color: #fff; font-weight: 800; text-align: center;
+    padding: 10px; border-radius: 10px; margin: 8px 0 14px; font-size: 15px;
+  }
+  #corrige .repere { background: #0F7A3D; }
+  .bloc { padding: 14px 0; border-bottom: 1px solid #E2DDD1; }
+  .fermer { display: block; width: 100%; margin-top: 18px; background: #5A6270; }
+</style>
+</head>
+<body>
+
+<h1>Valiz, mesure du rognage</h1>
+<p class="aide">Ouvre cette page dans Chrome, comme l'app. Appuie sur un bouton, regarde si le bandeau de couleur en haut de la feuille est entier ou coupe, puis reviens et envoie une capture de ce tableau.</p>
+
+<div class="mesures" id="mesures"></div>
+
+<div class="boutons">
+  <button onclick="ouvrir('actuel')">Feuille actuelle</button>
+  <button class="b" onclick="ouvrir('corrige')">Feuille corrigee</button>
+</div>
+
+<p class="aide">Fais defiler cette page vers le bas puis rouvre une feuille : la barre d'adresse de Chrome se masque, et c'est justement la que les valeurs changent.</p>
+
+<div class="overlay" id="actuel">
+  <div class="sheet">
+    <div class="repere">HAUT DE LA FEUILLE ACTUELLE</div>
+    <div id="corps-actuel"></div>
+    <button class="fermer" onclick="fermer('actuel')">Fermer</button>
+  </div>
+</div>
+
+<div class="overlay" id="corrige">
+  <div class="sheet">
+    <div class="repere">HAUT DE LA FEUILLE CORRIGEE</div>
+    <div id="corps-corrige"></div>
+    <button class="fermer" onclick="fermer('corrige')">Fermer</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  // Le contenu doit depasser le plafond, sinon la feuille ne remonte jamais
+  // assez haut pour reproduire le defaut. La feuille profil fait 858 px.
+  var corps = "";
+  for (var i = 1; i <= 22; i++) {
+    corps += '<div class="bloc">ligne de remplissage ' + i + '</div>';
+  }
+  document.getElementById("corps-actuel").innerHTML = corps;
+  document.getElementById("corps-corrige").innerHTML = corps;
+
+  function px(v) { return Math.round(v) + " px"; }
+
+  function unite(u) {
+    var d = document.createElement("div");
+    d.style.cssText = "position:absolute;visibility:hidden;height:100" + u + ";";
+    document.body.appendChild(d);
+    var h = d.getBoundingClientRect().height;
+    d.remove();
+    return h;
+  }
+
+  function safe(cote) {
+    var d = document.createElement("div");
+    d.style.cssText = "position:absolute;visibility:hidden;height:env(safe-area-inset-" + cote + ", 0px);";
+    document.body.appendChild(d);
+    var h = d.getBoundingClientRect().height;
+    d.remove();
+    return h;
+  }
+
+  window.mesurer = function () {
+    var vv = window.visualViewport;
+    var vh = unite("vh"), dvh = unite("dvh"), svh = unite("svh"), lvh = unite("lvh");
+    var visible = vv ? vv.height : innerHeight;
+    var plafond = vh * 0.92;
+    var deborde = plafond - visible;
+
+    var lignes = [
+      ["innerHeight", px(innerHeight)],
+      ["zone vraiment visible", px(visible)],
+      ["100vh (base de la regle)", px(vh)],
+      ["100dvh", px(dvh)],
+      ["100svh", px(svh)],
+      ["100lvh", px(lvh)],
+      ["safe-area haut", px(safe("top"))],
+      ["safe-area bas", px(safe("bottom"))],
+      ["ratio de pixels", (window.devicePixelRatio || 1).toFixed(3)],
+      ["ecran", screen.width + " x " + screen.height],
+      ["mode application installee", matchMedia("(display-mode: standalone)").matches ? "OUI" : "non, navigateur"],
+      ["feuille a 92vh", px(plafond)],
+      ["DEBORDEMENT", deborde > 1 ? "OUI, " + px(deborde) + " hors ecran" : "non"]
+    ];
+
+    var html = "";
+    for (var i = 0; i < lignes.length; i++) {
+      html += "<div><span>" + lignes[i][0] + "</span><b>" + lignes[i][1] + "</b></div>";
+    }
+    var boite = document.getElementById("mesures");
+    boite.innerHTML = html;
+    boite.className = "mesures " + (deborde > 1 ? "alerte" : "ok");
+  };
+
+  window.ouvrir = function (id) {
+    document.getElementById(id).classList.add("open");
+    setTimeout(window.mesurer, 400);
+  };
+  window.fermer = function (id) {
+    document.getElementById(id).classList.remove("open");
+    setTimeout(window.mesurer, 400);
+  };
+
+  window.mesurer();
+  addEventListener("resize", window.mesurer);
+  addEventListener("scroll", window.mesurer);
+  if (window.visualViewport) {
+    visualViewport.addEventListener("resize", window.mesurer);
+    visualViewport.addEventListener("scroll", window.mesurer);
+  }
+})();
+</script>
+</body>
+</html>
