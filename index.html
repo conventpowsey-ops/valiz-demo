@@ -8352,8 +8352,14 @@
   function updateJetonChip() {
     var c = document.getElementById("jetonChip"); if (!c) return;
     if (!me) {
-      c.innerHTML = '<span class="coin"></span><b>3</b> offerts';
-      c.title = "Crée ton compte, 1 jeton offert";
+      // Le nombre vient de TOKEN.signup, jamais d'un chiffre ecrit ici : c'est
+      // la pastille qui annoncait encore 3 offerts le 27/07 alors que le
+      // serveur en versait 1, quatorzieme occurrence de l'ecart. Elle avait
+      // survecu a tous les alignements parce que sa phrase ne contient pas le
+      // mot "jeton", donc aucune recherche sur "jeton" ne la trouvait.
+      var mot = TOKEN.signup === 1 ? "offert" : "offerts";
+      c.innerHTML = '<span class="coin"></span><b>' + TOKEN.signup + '</b> ' + mot;
+      c.title = "Crée ton compte, " + TOKEN.signup + " jeton " + mot;
       return;
     }
     c.title = "Ton solde de jetons";
@@ -10317,7 +10323,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-27-1013";
+  var VALIZ_VERSION = "2026-07-27-1637";
 
   // ---- Historique des ameliorations ---------------------------------------
   // Ecrit en langue d'utilisateur, pas en langue de developpeur : ce que la
