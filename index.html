@@ -944,6 +944,45 @@
     padding:0 4px; border-radius:999px; background:var(--red); color:#fff;
     font-size:10px; font-weight:800; margin-left:2px;
   }
+  /* ---- Tableau de bord admin (phase 15) ------------------------------- */
+  .dash-sub { font-size:12.5px; color:var(--ink-soft); margin:-4px 0 16px; }
+  .dash-sec { margin:20px 0 8px; font-size:12px; font-weight:700; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--ink-soft); }
+  .dash-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+  .dash-grid.three { grid-template-columns:repeat(3,1fr); }
+  .dash-tile { background:var(--sunken); border-radius:12px; padding:12px 13px; }
+  .dash-tile .v { font-size:23px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; line-height:1.1; }
+  .dash-tile .l { font-size:11.5px; color:var(--ink-soft); margin-top:3px; }
+  .dash-tile .d { font-size:11px; color:var(--blue); font-weight:700; margin-top:2px; }
+  /* Entonnoir : une seule teinte, largeur = magnitude. Bout arrondi ancre a gauche. */
+  .dash-step { margin:7px 0; }
+  .dash-step-top { display:flex; justify-content:space-between; align-items:baseline; font-size:12.5px; margin-bottom:4px; }
+  .dash-step-top b { font-weight:700; color:var(--ink); }
+  .dash-step-top .pct { color:var(--ink-soft); font-size:11.5px; font-variant-numeric:tabular-nums; }
+  .dash-track { height:9px; background:var(--line); border-radius:5px; overflow:hidden; }
+  .dash-fill { height:100%; background:var(--blue); border-radius:5px; min-width:5px; }
+  /* Barres jours : une serie, marks fins ancres a la baseline. */
+  .dash-days { display:flex; align-items:flex-end; gap:4px; height:96px; padding-top:6px; }
+  .dash-days .col { flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:3px; height:100%; }
+  .dash-days .val { font-size:12px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; }
+  .dash-days .bar { width:100%; max-width:22px; background:var(--gold); border-radius:4px 4px 0 0; min-height:3px; }
+  .dash-days .bar.b2 { background:var(--blue); }
+  .dash-days .cap { font-size:10px; color:var(--ink-soft); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .dash-corr { list-style:none; padding:0; margin:0; }
+  .dash-corr li { display:flex; align-items:center; gap:8px; padding:5px 0; font-size:13px; }
+  .dash-corr .r { flex:0 0 auto; font-weight:700; color:var(--ink); min-width:96px; }
+  .dash-corr .t { flex:1; height:7px; background:var(--line); border-radius:4px; overflow:hidden; }
+  .dash-corr .t > span { display:block; height:100%; background:var(--blue); border-radius:4px; }
+  .dash-corr .n { flex:0 0 auto; color:var(--ink-soft); font-variant-numeric:tabular-nums; }
+  /* Sante : statut reserve, jamais couleur seule (icone + libelle). */
+  .dash-health { display:flex; flex-direction:column; gap:6px; }
+  .dash-h { display:flex; align-items:center; gap:8px; font-size:13px; padding:8px 10px; border-radius:10px; background:var(--sunken); }
+  .dash-h .ico { flex:0 0 auto; font-weight:800; }
+  .dash-h.ok .ico { color:#1f7a4d; }
+  .dash-h.bad .ico { color:#b3261e; }
+  .dash-h .lab { flex:1; color:var(--ink); }
+  .dash-h .num { font-weight:700; font-variant-numeric:tabular-nums; }
+  .dash-updated { font-size:11px; color:var(--ink-soft); text-align:center; margin:16px 0 2px; }
 </style>
 
 <div class="airmail"></div>
@@ -1279,7 +1318,7 @@
     <h2>Politique de confidentialité</h2>
     <p class="sub">Ce qu'on collecte, pourquoi, et combien de temps.</p>
     <div class="legal-corps">
-      <div class="legal-cle">Nous ne vendons aucune donnée, nous ne les transmettons à aucun annonceur, et l'application <b>n'utilise aucun cookie de mesure d'audience, aucun traceur publicitaire et aucun outil d'analyse comportementale.</b></div>
+      <div class="legal-cle">Nous ne vendons aucune donnée, nous ne les transmettons à aucun annonceur, et l'application <b>n'utilise aucun cookie, aucun traceur publicitaire et aucun outil d'analyse comportementale.</b> Nous comptons seulement le nombre de visites par jour, de façon anonyme, sans cookie et sans jamais vous identifier.</div>
 
       <h3>1. Qui traite vos données</h3>
       <p>PRINT ACTIF SRL, qui édite le service sous le nom Valiz, est responsable du traitement des données décrites ci-dessous.</p>
@@ -1293,7 +1332,7 @@
       <p><b>Quand vous publiez une annonce :</b> ville de départ, ville d'arrivée, date, kilos, participation aux frais éventuelle, description, et le numéro que vous voulez utiliser pour ce trajet.</p>
       <p>Sont publics : la ligne, la date, les kilos, la participation demandée, votre prénom, votre note et votre nombre de trajets. Ne le sont pas : votre numéro et votre email, révélés uniquement à un membre ayant dépensé un jeton.</p>
       <p><b>Quand un transport a lieu :</b> la description du colis déclarée, l'horodatage de l'acceptation des règles sur les objets interdits, un code à quatre chiffres confirmant la remise, la date de la remise, et les notes et commentaires réciproques. Ces déclarations sont conservées parce qu'elles établissent que chacun savait ce qu'il transportait ou envoyait. C'est une garantie pour vous deux.</p>
-      <p><b>Le stockage local de votre navigateur</b> ne sert qu'à vous garder connecté et à mémoriser les annonces déjà débloquées.</p>
+      <p><b>Le stockage local de votre navigateur</b> ne sert qu'à vous garder connecté, à mémoriser les annonces déjà débloquées, et à ne compter votre visite qu'une fois par jour.</p>
 
       <h3>3. Qui d'autre voit vos données</h3>
       <table>
@@ -1381,7 +1420,7 @@
       <p>En trois lignes :</p>
       <ul>
         <li><b>Valiz met en relation, Valiz ne transporte rien</b> et n'est partie à aucun accord entre deux membres.</li>
-        <li><b>On ne vend aucune donnée</b>, il n'y a ni traceur publicitaire ni outil de mesure d'audience.</li>
+        <li><b>On ne vend aucune donnée</b>, il n'y a ni traceur publicitaire ni profilage. On compte seulement le nombre de visites par jour, de façon anonyme.</li>
         <li><b>Le colis se remet ouvert et s'inspecte</b>, et le voyageur répond personnellement de ce qu'il embarque.</li>
       </ul>
       <p>Le détail est ici : <button type="button" class="lien-legal-inline" id="lienCgv4">conditions générales</button>, <button type="button" class="lien-legal-inline" id="lienPrivacy4">politique de confidentialité</button>, <button type="button" class="lien-legal-inline" id="lienLegal4">mentions légales</button>.</p>
@@ -1421,6 +1460,10 @@
 <!-- PROFIL sheet -->
 <div class="overlay" id="profilOverlay">
   <div class="sheet" id="profilSheet"></div>
+</div>
+
+<div class="overlay" id="adminOverlay">
+  <div class="sheet" id="adminSheet"></div>
 </div>
 
 <div class="legal-foot">
@@ -9548,6 +9591,7 @@
     if (!me) { ouvrirAuth("login"); return; }
     dessinerProfil();
     openOverlay("#profilOverlay");
+    verifierAdmin().then(function(a){ if (a) dessinerProfil(); });
     chargerMonProfil()
       .then(chargerTransports)
       .then(chargerNotifications)
@@ -9711,6 +9755,9 @@
       +   '<div class="prof-stat"><div class="v">' + miennes.length + '</div><div class="l">annonces</div></div>'
       +   '<div class="prof-stat"><div class="v">' + (p.trips || 0) + '</div><div class="l">transports</div></div>'
       + '</div>'
+      + (estAdmin
+          ? '<button type="button" class="pic-btn" id="btnDashboard" style="width:100%;margin-bottom:12px;border-color:var(--blue);color:var(--blue);font-weight:700">Tableau de bord Valiz</button>'
+          : '')
       + '<div class="pic-row">'
       +   '<button type="button" class="pic-btn" id="btnPhoto">' + (p.photo_url ? "Changer ma photo" : "Ajouter une photo") + '</button>'
       +   '<input type="file" id="inputPhoto" accept="image/jpeg,image/png,image/webp" style="display:none">'
@@ -10323,7 +10370,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-27-1637";
+  var VALIZ_VERSION = "2026-07-29-1102";
 
   // ---- Historique des ameliorations ---------------------------------------
   // Ecrit en langue d'utilisateur, pas en langue de developpeur : ce que la
@@ -10332,28 +10379,8 @@
   // entree (pastille rouge sur le lien Nouveautes), elle ne change jamais une
   // fois publiee, sinon la pastille reapparaitrait chez tout le monde.
   var VALIZ_CHANGELOG = [
-    { cle: "2026-07-26", date: "26 juillet 2026", points: [
-      "<b>Une phrase d'accueil pour qui arrive sans compte</b>, avec les chiffres réels du moment : combien de voyageurs partent bientôt, vers où, et combien de personnes cherchent à envoyer. Elle disparaît dès que tu es connecté.",
-      "<b>« 1 personne cherche à envoyer vers Libreville » se clique.</b> Sur ton trajet, cette ligne t'emmène directement aux personnes concernées, avec de quoi les contacter. Avant, elle t'annonçait de la demande sans te dire qui.",
-      "<b>Elle ne te compte plus toi-même.</b> Si c'est ta propre demande qui vise ta destination, la ligne ne l'annonce plus comme quelqu'un d'autre.",
-      "<b>Tes transports en cours s'affichent dès l'accueil.</b> Ton code de remise, la demande à accepter, la note à donner : tout est sous la recherche, au lieu d'être caché dans ton profil. Le plus urgent en premier.",
-      "<b>Une croix pour fermer</b>, en haut à droite de chaque fenêtre. Plus besoin de descendre tout en bas pour trouver le bouton, et elle reste visible quand on fait défiler.",
-      "<b>Cette page.</b> Le numéro de version et l'historique des améliorations sont maintenant lisibles depuis l'app, en haut de l'écran.",
-      "Fermer une fenêtre ouverte par-dessus une autre ramène à celle du dessous, au lieu de tout refermer d'un coup."
-    ]},
-    { cle: "2026-07-25", date: "25 juillet 2026", points: [
-      "<b>Avis commentés</b> après chaque transport, révélés en même temps pour les deux personnes, comme sur Airbnb.",
-      "<b>Fiche publique</b> : en cliquant sur un nom, on voit ses notes et ce qu'on dit d'elle, jamais ses coordonnées.",
-      "<b>Parrainage</b> : ton code se partage, et tu gagnes 1 jeton quand ton filleul fait son premier transport.",
-      "<b>Connexion Google</b> et <b>protection anti-robots</b> invisible à l'inscription.",
-      "<b>Coup de main par défaut</b> : on ne demande rien. La participation aux frais reste possible, plafonnée à 8 euros par kilo.",
-      "L'app se signale quand une nouvelle version est sortie, et la liste des annonces se rafraîchit toute seule.",
-      "Beaucoup de confort sur téléphone : plus d'écran qui ballotte, boutons plus grands, suggestions de villes bien placées, icône et image de partage refaites."
-    ]},
-    { cle: "2026-07-24", date: "24 juillet 2026", points: [
-      "<b>Première version de Valiz.</b> Publier un trajet ou une demande, chercher, débloquer un contact avec un jeton, organiser l'envoi entre vous.",
-      "Le cycle complet du transport : demande, acceptation, <b>code à 4 chiffres</b> remis à l'arrivée, notation mutuelle.",
-      "1 jeton offert à la création du compte, 1 jeton gagné à chaque remise confirmée."
+    { cle: "2026-07-29", date: "29 juillet 2026", points: [
+      "<b>Valiz est ouvert.</b> À partir d'aujourd'hui, chaque nouveauté et chaque amélioration de l'app est annoncée ici, avec sa date."
     ]}
   ];
 
@@ -10440,8 +10467,175 @@
   majCompte();
   render();
   dernierChargement = Date.now();
+  // ---- Tableau de bord admin (phase 15) ---------------------------------
+  // L'acces est decide par le SERVEUR : stats_admin() ne repond qu'aux comptes
+  // inscrits dans la table admins. Le front ne fait que tenter l'appel ; s'il
+  // reussit, la personne est admin et on affiche l'entree. Rien de sensible
+  // n'est cache dans la page, la porte est en base.
+  var estAdmin = false;
+  var statsCache = null;
+
+  function verifierAdmin() {
+    if (!me) { estAdmin = false; return Promise.resolve(false); }
+    return rpc("stats_admin", {})
+      .then(function(s){ estAdmin = true; statsCache = s; return true; })
+      .catch(function(){ estAdmin = false; return false; });
+  }
+
+  // Comptage de visites sans cookie ni identifiant : on marque le jour dans le
+  // stockage local (qui sert deja a garder la session), donc un meme appareil
+  // compte pour un "unique" une fois par jour, les rechargements suivants pour
+  // une "vue". Aucune donnee personnelle ne part au serveur.
+  function pingVisite() {
+    var cle = "valiz_visite_jour";
+    var auj = new Date().toISOString().slice(0, 10);
+    var premiere = false;
+    try {
+      premiere = localStorage.getItem(cle) !== auj;
+      if (premiere) localStorage.setItem(cle, auj);
+    } catch (e) {}
+    rpc("ping_visite", { p_unique: premiere }).catch(function(){});
+  }
+
+  function dashDays(arr, cle, classe) {
+    if (!arr || !arr.length) {
+      return '<p class="dash-sub" style="margin:6px 0 0">Le comptage démarre aujourd\'hui.</p>';
+    }
+    var max = 1;
+    arr.forEach(function(d){ if (d[cle] > max) max = d[cle]; });
+    return '<div class="dash-days">' + arr.map(function(d){
+      // La barre occupe la moitie basse au minimum quand il n'y a qu'une valeur,
+      // sinon une seule journee ecrase toutes les autres a une hauteur nulle.
+      var h = 25 + Math.round((d[cle] / max) * 70);
+      var jj = String(d.jour).slice(8, 10), mm = String(d.jour).slice(5, 7);
+      return '<div class="col" title="' + esc(String(d.jour)) + ' : ' + d[cle] + '">'
+        + '<div class="val">' + d[cle] + '</div>'
+        + '<div class="bar ' + (classe || '') + '" style="height:' + h + '%"></div>'
+        + '<div class="cap">' + jj + '/' + mm + '</div></div>';
+    }).join('') + '</div>';
+  }
+
+  function tile(v, l, d) {
+    return '<div class="dash-tile"><div class="v">' + v + '</div><div class="l">' + l + '</div>'
+      + (d ? '<div class="d">' + d + '</div>' : '') + '</div>';
+  }
+
+  function funnelStep(label, n, base) {
+    var pct = base > 0 ? Math.round((n / base) * 100) : 0;
+    return '<div class="dash-step"><div class="dash-step-top"><b>' + label + '</b>'
+      + '<span class="pct">' + n + ' · ' + pct + '%</span></div>'
+      + '<div class="dash-track"><div class="dash-fill" style="width:' + pct + '%"></div></div></div>';
+  }
+
+  function ligneSante(bon, label, n) {
+    return '<div class="dash-h ' + (bon ? 'ok' : 'bad') + '">'
+      + '<span class="ico">' + (bon ? '✓' : '⚠') + '</span>'
+      + '<span class="lab">' + label + '</span>'
+      + '<span class="num">' + n + '</span></div>';
+  }
+
+  function rendreDashboard(s) {
+    var c = s.comptes, e = s.entonnoir, j = s.jetons, ar = s.argent,
+        sa = s.sante, vi = s.visites, ac = s.activite;
+    var maxCorr = 1;
+    (s.corridors || []).forEach(function(x){ if (x.n > maxCorr) maxCorr = x.n; });
+    var corr = (s.corridors && s.corridors.length)
+      ? '<ul class="dash-corr">' + s.corridors.map(function(x){
+          return '<li><span class="r">' + esc(x.trajet) + '</span>'
+            + '<span class="t"><span style="width:' + Math.round((x.n / maxCorr) * 100) + '%"></span></span>'
+            + '<span class="n">' + x.n + '</span></li>';
+        }).join('') + '</ul>'
+      : '<p class="dash-sub">Aucune annonce réelle pour le moment.</p>';
+
+    var html = ''
+      + '<div class="grabber"></div>'
+      + '<h2>Tableau de bord Valiz</h2>'
+      + '<p class="dash-sub">Chiffres en direct, à la seconde où tu ouvres cet écran.</p>'
+
+      + '<div class="dash-sec">Vue d\'ensemble</div>'
+      + '<div class="dash-grid three">'
+      +   tile(c.total, 'inscrits', (c.aujourdhui ? '+' + c.aujourdhui + ' aujourd\'hui' : (c.j7 ? '+' + c.j7 + ' sur 7 j' : '')))
+      +   tile((vi.uniques_aujourdhui || 0), 'visiteurs aujourd\'hui', (vi.aujourdhui ? (vi.aujourdhui + ' vues') : ''))
+      +   tile(ar.ca_eur + ' €', 'encaissé', (ar.achats_payes ? ar.achats_payes + ' achat(s)' : ''))
+      + '</div>'
+
+      + '<div class="dash-sec">Le parcours, de l\'inscription au transport</div>'
+      +   funnelStep('Inscrits', e.inscrits, e.inscrits)
+      +   funnelStep('Profil complété', e.profil_complet, e.inscrits)
+      +   funnelStep('Ont publié une annonce', e.ont_publie, e.inscrits)
+      +   funnelStep('Ont débloqué un contact', e.ont_debloque, e.inscrits)
+      +   funnelStep('Ont transporté', e.ont_transporte, e.inscrits)
+      +   funnelStep('Ont laissé un avis', e.ont_note, e.inscrits)
+
+      + '<div class="dash-sec">Nouveaux inscrits par jour</div>'
+      + '<p class="dash-sub" style="margin:0 0 6px">Chaque barre est une journée (jour/mois). Le chiffre au-dessus est le nombre de nouveaux comptes.</p>'
+      +   dashDays(c.par_jour, 'n', 'b2')
+
+      + '<div class="dash-sec">Visites par jour</div>'
+      + '<p class="dash-sub" style="margin:0 0 6px">Nombre d\'ouvertures de l\'app, par journée (jour/mois).</p>'
+      +   dashDays(vi.par_jour, 'vues', '')
+
+      + '<div class="dash-sec">Destinations demandées</div>'
+      + '<p class="dash-sub" style="margin:0 0 6px">Les trajets les plus publiés (départ vers arrivée).</p>'
+      +   corr
+
+      + '<div class="dash-sec">Jetons</div>'
+      + '<div class="dash-grid three">'
+      +   tile(j.en_circulation, 'en circulation')
+      +   tile(j.achetes, 'achetés')
+      +   tile(j.depenses_deblocage, 'déblocages')
+      + '</div>'
+
+      + '<div class="dash-sec">Argent</div>'
+      + '<div class="dash-grid three">'
+      +   tile(ar.ca_eur + ' €', 'chiffre d\'affaires')
+      +   tile(ar.achats_payes, 'achats payés')
+      +   tile(ar.panier_moyen_eur + ' €', 'panier moyen')
+      + '</div>'
+
+      + '<div class="dash-sec">Activité</div>'
+      + '<div class="dash-grid">'
+      +   tile(s.annonces.reelles, 'annonces en ligne')
+      +   tile(ac.deblocages, 'contacts débloqués')
+      +   tile(ac.transports_livres, 'transports livrés')
+      +   tile(ac.avis, 'avis déposés')
+      + '</div>'
+
+      + '<div class="dash-sec">Santé</div>'
+      + '<div class="dash-health">'
+      +   ligneSante(sa.mails_en_echec === 0, 'Mails en échec', sa.mails_en_echec)
+      +   ligneSante(sa.mails_en_file === 0, 'Mails en attente d\'envoi', sa.mails_en_file)
+      +   ligneSante(sa.doublons_tel === 0, 'Doublons de téléphone probables', sa.doublons_tel)
+      +   ligneSante(sa.comptes_sans_profil === 0, 'Comptes sans profil', sa.comptes_sans_profil)
+      + '</div>'
+
+      + '<div class="dash-updated">Mis à jour à l\'instant · ' + esc(String(s.genere_le).slice(11, 16)) + '</div>'
+      + '<button type="button" class="btn-ghost" data-close style="width:100%;margin-top:14px">Fermer</button>';
+
+    $("#adminSheet").innerHTML = html;
+  }
+
+  function ouvrirDashboard() {
+    $("#adminSheet").innerHTML = '<div class="grabber"></div>'
+      + '<p class="sub" style="margin:24px 0">Un instant, je rassemble les chiffres.</p>';
+    openOverlay("#adminOverlay");
+    rpc("stats_admin", {})
+      .then(function(s){ statsCache = s; rendreDashboard(s); })
+      .catch(function(){
+        $("#adminSheet").innerHTML = '<div class="grabber"></div>'
+          + '<h2>Tableau de bord</h2>'
+          + '<p class="sub">Impossible de charger les chiffres pour le moment.</p>'
+          + '<button type="button" class="btn-ghost" data-close style="width:100%;margin-top:14px">Fermer</button>';
+      });
+  }
+
+  document.addEventListener("click", function(e){
+    if (e.target.closest("#btnDashboard")) ouvrirDashboard();
+  });
+
   verifierVersion();
   loadAnnonces();
+  pingVisite();
   recupererSessionExterne()
     .then(function(){
       if (me) {
