@@ -8391,6 +8391,25 @@
 
   function estAMoi(i) { return !!(me && i && i.userId && i.userId === me.id); }
 
+  // Date du jour au format des annonces (AAAA-MM-JJ), en heure LOCALE de
+  // l'appareil. Surtout pas `new Date().toISOString().slice(0,10)`, qui donne
+  // la date UTC : a Bruxelles en ete l'UTC a deux heures de retard, et entre
+  // minuit et 2h du matin un vol de la veille resterait affiche comme a venir.
+  function dateDuJour() {
+    var d = new Date(), m = d.getMonth() + 1, j = d.getDate();
+    return d.getFullYear() + "-" + (m < 10 ? "0" : "") + m + "-" + (j < 10 ? "0" : "") + j;
+  }
+
+  // Un vol parti n'a plus rien a faire dans la liste publique, ni dans les
+  // compteurs, ni dans le "N personnes cherchent vers X" : le voyage a eu
+  // lieu, le contacter ne sert plus a rien et faire payer un jeton pour ca
+  // serait pire. L'annonce n'est pas supprimee pour autant, elle reste en base
+  // (les CGU la gardent 12 mois) et son auteur la retrouve dans la section
+  // "Passees" de son profil. Bug constate le 01/08 : le vol du 31/07 etait
+  // toujours en tete de liste, parce que le seul filtre etait le type et le
+  // trajet, jamais la date.
+  function estAVenir(i) { return i.date >= dateDuJour(); }
+
   function setBalance(n) { balance = n; updateJetonChip(); }
   function updateJetonChip() {
     var c = document.getElementById("jetonChip"); if (!c) return;
@@ -8550,7 +8569,7 @@
     // promet un inconnu et mene a soi-meme est pire que pas de ligne du tout.
     var opp = item.kind === "trajet" ? "demande" : "trajet";
     return items.filter(function(i){
-      return i.kind === opp && i.to === item.to && !estAMoi(i);
+      return i.kind === opp && i.to === item.to && !estAMoi(i) && estAVenir(i);
     }).length;
   }
 
@@ -8643,8 +8662,7 @@
     if (!el) return;
     if (me) { el.hidden = true; el.innerHTML = ""; return; }
 
-    var aujourdhui = new Date().toISOString().slice(0, 10);
-    var aVenir = items.filter(function(i){ return !i.isDemo && i.date >= aujourdhui; });
+    var aVenir = items.filter(function(i){ return !i.isDemo && estAVenir(i); });
     var trajets = aVenir.filter(function(i){ return i.kind === "trajet"; });
     var demandes = aVenir.filter(function(i){ return i.kind === "demande"; });
     if (!trajets.length && !demandes.length) { el.hidden = true; el.innerHTML = ""; return; }
@@ -8677,8 +8695,10 @@
   function render() {
     renderAccroche();   // ici, et nulle part ailleurs : render() tourne deja a
                         // chaque chargement, chaque recherche et chaque bascule
-    $("#cntT").textContent = items.filter(function(i){return i.kind==="trajet";}).length;
-    $("#cntD").textContent = items.filter(function(i){return i.kind==="demande";}).length;
+    // Les compteurs comptent ce que la liste montre : uniquement les annonces
+    // a venir. Un "2 voyageurs" dont un est deja parti est un mensonge.
+    $("#cntT").textContent = items.filter(function(i){return i.kind==="trajet" && estAVenir(i);}).length;
+    $("#cntD").textContent = items.filter(function(i){return i.kind==="demande" && estAVenir(i);}).length;
     var kind = state.seg === "trajets" ? "trajet" : "demande";
     var list = items.filter(function(i){
       // masqueMiennes n'est vrai que juste apres un clic sur la ligne
@@ -8687,6 +8707,7 @@
       // annonce 1 personne et on en affiche 2, dont soi-meme. Hors de ce
       // contexte le drapeau est faux, et chacun voit ses propres annonces.
       if (state.masqueMiennes && estAMoi(i)) return false;
+      if (!estAVenir(i)) return false;   // le vol est parti, il sort de la liste
       return i.kind===kind && matchLeg(i.from, state.from) && matchLeg(i.to, state.to);
     });
     list.sort(function(a,b){ return a.date < b.date ? -1 : 1; });
@@ -9721,10 +9742,9 @@
     if (!me) return;
     var p = monProfil || {};
     var nom = p.display_name || "Moi";
-    var aujourdhui = new Date().toISOString().slice(0, 10);
     var miennes = items.filter(estAMoi);
-    var avenir = miennes.filter(function(i){ return i.date >= aujourdhui; });
-    var passees = miennes.filter(function(i){ return i.date < aujourdhui; });
+    var avenir = miennes.filter(estAVenir);
+    var passees = miennes.filter(function(i){ return !estAVenir(i); });
 
     function ligne(i) {
       return '<li class="mini-item"><div>'
@@ -10370,7 +10390,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-07-29-1102";
+  var VALIZ_VERSION = "2026-08-01-1153";
 
   // ---- Historique des ameliorations ---------------------------------------
   // Ecrit en langue d'utilisateur, pas en langue de developpeur : ce que la
