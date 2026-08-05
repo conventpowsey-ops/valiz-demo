@@ -8093,6 +8093,8 @@
   // la liste des annonces se lit avec la cle publique, sans compte.
   var LS_SESSION = "valiz_session_v2";
   var userToken = null;
+  var userTokenExpire = 0;   // date d'expiration du jeton d'acces, en ms epoch
+  var refreshEnCours = null; // promesse partagee : un seul rafraichissement a la fois
   var mesTransports = [];    // rempli par chargerTransports (phase 3)
   var me = null;             // { id, email }
   var monProfil = null;      // { display_name, photo_url, nationalite, ... }
@@ -8109,22 +8111,92 @@
       return r.ok ? j : Promise.reject(j || { message: "erreur " + r.status });
     });
   }
-  function rpc(nom, args) {
-    return fetch(SUPA_REST + "/rpc/" + nom, {
+
+  // ---- Duree de vie du jeton d'acces -------------------------------------
+  // Le jeton d'acces Supabase ne vit qu'UNE HEURE (reglage `jwt_exp`, 3600 s).
+  // Jusqu'au 05/08 il n'etait echange qu'une seule fois, au demarrage de l'app,
+  // par `authInit`. Une app laissee ouverte plus d'une heure, ce qui est la
+  // norme d'une app posee sur l'ecran d'accueil, continuait donc a presenter un
+  // jeton perime : le serveur repondait 401 a TOUT appel authentifie, et le
+  // client n'avait aucune reprise. Publier affichait "Publication impossible,
+  // reessaie", et reessayer ne pouvait pas marcher, puisque rien ne renouvelait
+  // le jeton. Zero annonce publiee entre le 28/07 et le 05/08 pour cette raison.
+  // Retour de Brigitte le 05/08 a 20h07, 401 mesures dans les logs a 19h52,
+  // soit 1h24 apres sa connexion.
+  //
+  // Desormais : tout appel authentifie passe par `fetchAuth`, qui renouvelle le
+  // jeton AVANT qu'il expire, et le rejoue une fois si le serveur repond 401
+  // quand meme (horloge de l'appareil decalee, jeton revoque cote serveur).
+  // La rotation des jetons de rafraichissement est active cote Supabase : deux
+  // rafraichissements simultanes se marcheraient dessus, d'ou la promesse
+  // partagee `refreshEnCours`.
+  var MARGE_JETON = 120000;  // on renouvelle 2 minutes avant l'echeance
+
+  function rafraichirJeton() {
+    if (refreshEnCours) return refreshEnCours;
+    var saved = null; try { saved = JSON.parse(localStorage.getItem(LS_SESSION)); } catch (e) {}
+    if (!saved || !saved.refresh_token) return Promise.reject({ message: "session absente" });
+    refreshEnCours = fetch(SUPA_URL + "/auth/v1/token?grant_type=refresh_token", {
       method: "POST",
-      headers: supaAuthHeaders({ "Content-Type": "application/json" }),
+      headers: { "apikey": SUPA_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: saved.refresh_token })
+    }).then(jsonOuErreur).then(saveSession)
+      .then(function(s){ refreshEnCours = null; return s; })
+      .catch(function(e){ refreshEnCours = null; return Promise.reject(e); });
+    return refreshEnCours;
+  }
+
+  // Le jeton de rafraichissement lui-meme est mort (revoque, ou session
+  // remplacee ailleurs) : on ne peut plus rien signer. On le dit, une fois,
+  // plutot que de laisser l'app echouer en silence sur chaque geste.
+  function sessionPerdue() {
+    if (!me) return;
+    clearSession();
+    majCompte(); render();
+    showToast("Ta session a expiré. Reconnecte-toi.");
+  }
+
+  function fetchAuth(url, opts, dejaRejoue) {
+    opts = opts || {};
+    var besoin = me && userToken && userTokenExpire
+                 && Date.now() > userTokenExpire - MARGE_JETON;
+    var prepare = besoin ? rafraichirJeton().catch(function(){ return null; })
+                         : Promise.resolve(null);
+    return prepare.then(function(){
+      var o = {};
+      for (var k in opts) o[k] = opts[k];
+      o.headers = supaAuthHeaders(opts.headers);
+      return fetch(url, o).then(function(r){
+        if (r.status !== 401 || dejaRejoue || !me) return r;
+        return rafraichirJeton()
+          .then(function(){ return fetchAuth(url, opts, true); })
+          .catch(function(){ sessionPerdue(); return r; });
+      });
+    });
+  }
+
+  function rpc(nom, args) {
+    return fetchAuth(SUPA_REST + "/rpc/" + nom, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(args || {})
     }).then(jsonOuErreur);
   }
   function saveSession(s) {
     if (!s || !s.access_token) return Promise.reject({ message: "session absente" });
     userToken = s.access_token;
+    // `expires_at` est une date en secondes epoch, `expires_in` une duree en
+    // secondes. Supabase renvoie l'un ou l'autre selon le chemin ; a defaut des
+    // deux, on retombe sur l'heure declaree par le projet.
+    userTokenExpire = s.expires_at ? Number(s.expires_at) * 1000
+                    : Date.now() + (Number(s.expires_in || 3600) * 1000);
     me = { id: s.user.id, email: s.user.email };
     try { localStorage.setItem(LS_SESSION, JSON.stringify({ refresh_token: s.refresh_token })); } catch (e) {}
     return s;
   }
   function clearSession() {
-    userToken = null; me = null; monProfil = null; balance = 0; mesTransports = []; mesNotifs = [];
+    userToken = null; userTokenExpire = 0; refreshEnCours = null;
+    me = null; monProfil = null; balance = 0; mesTransports = []; mesNotifs = [];
     try { localStorage.removeItem(LS_SESSION); } catch (e) {}
     unlocked = {}; save(LS_UNLOCK, unlocked);
   }
@@ -8230,7 +8302,10 @@
       .then(jsonOuErreur)
       .then(function(u){
         infos = (u && u.user_metadata) || {};
-        return saveSession({ access_token: p.access_token, refresh_token: p.refresh_token, user: u });
+        // Google renvoie l'echeance dans le fragment : la garder, sinon le
+        // renouvellement automatique ne saurait pas quand agir.
+        return saveSession({ access_token: p.access_token, refresh_token: p.refresh_token,
+                             expires_at: p.expires_at, expires_in: p.expires_in, user: u });
       })
       .then(function(){
         // Premiere venue par Google : le profil et le jeton offert n'existent pas
@@ -8345,12 +8420,10 @@
   function authInit() {
     var saved = null; try { saved = JSON.parse(localStorage.getItem(LS_SESSION)); } catch (e) {}
     if (!saved || !saved.refresh_token) return Promise.resolve(null);
-    return fetch(SUPA_URL + "/auth/v1/token?grant_type=refresh_token", {
-      method: "POST",
-      headers: { "apikey": SUPA_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: saved.refresh_token })
-    }).then(jsonOuErreur)
-      .then(saveSession)
+    // Meme chemin de renouvellement que pendant la session : un seul endroit
+    // sait echanger un jeton de rafraichissement, donc un seul endroit peut se
+    // tromper.
+    return rafraichirJeton()
       .then(chargerMonProfil)
       .then(chargerTransports)
       .then(chargerNotifications)
@@ -8359,7 +8432,7 @@
   }
   function loadBalance() {
     if (!me) { setBalance(0); return Promise.resolve(0); }
-    return fetch(SUPA_REST + "/balances?select=jetons", { headers: supaAuthHeaders() })
+    return fetchAuth(SUPA_REST + "/balances?select=jetons", {})
       .then(function(r){ return r.ok ? r.json() : []; })
       .then(function(rows){ setBalance((rows && rows.length) ? rows[0].jetons : 0); return balance; })
       .catch(function(){ return balance; });
@@ -9066,10 +9139,9 @@
   // Eteindre la vente doit arreter la vente, jamais la rendre gratuite.
   function ouvrirPaiementStripe(pack) {
     if (!userToken) return Promise.resolve(false);
-    return fetch(SUPA_URL + "/functions/v1/creer-paiement", {
+    return fetchAuth(SUPA_URL + "/functions/v1/creer-paiement", {
       method: "POST",
-      headers: { "apikey": SUPA_KEY, "Authorization": "Bearer " + userToken,
-                 "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ pack: pack })
     }).then(function(r){
       if (r.status === 503) return false;
@@ -9952,9 +10024,8 @@
     var marque = "/storage/v1/object/public/avatars/";
     if (!url || url.indexOf(marque) < 0) return Promise.resolve();
     var chemin = url.split(marque)[1];
-    return fetch(SUPA_URL + "/storage/v1/object/avatars/" + chemin, {
-      method: "DELETE",
-      headers: { "apikey": SUPA_KEY, "Authorization": "Bearer " + userToken }
+    return fetchAuth(SUPA_URL + "/storage/v1/object/avatars/" + chemin, {
+      method: "DELETE"
     }).catch(function(){});
   }
 
@@ -9964,9 +10035,9 @@
     return reduireImage(file, 512)
       .then(function(blob){
         var chemin = me.id + "/avatar-" + Date.now() + ".jpg";
-        return fetch(SUPA_URL + "/storage/v1/object/avatars/" + chemin, {
+        return fetchAuth(SUPA_URL + "/storage/v1/object/avatars/" + chemin, {
           method: "POST",
-          headers: { "apikey": SUPA_KEY, "Authorization": "Bearer " + userToken, "Content-Type": "image/jpeg" },
+          headers: { "Content-Type": "image/jpeg" },
           body: blob
         }).then(function(r){ return r.ok ? chemin : Promise.reject(r.status); });
       })
@@ -10239,6 +10310,11 @@
         showToast("Tu as atteint 5 annonces pour aujourd'hui.");
       } else if (msg.indexOf("date invalide") >= 0) {
         showToast("Choisis une date à venir.");
+      } else if (msg.indexOf("JWT") >= 0 || msg.indexOf("expired") >= 0 || msg.indexOf("401") >= 0) {
+        // `fetchAuth` a deja tente de renouveler le jeton et de rejouer : si on
+        // arrive ici, c'est la session entiere qui est morte. Le dire, plutot
+        // que d'inviter a reessayer un geste qui ne peut pas aboutir.
+        showToast("Ta session a expiré. Reconnecte-toi, puis republie.");
       } else {
         showToast("Publication impossible, réessaie.");
       }
@@ -10390,7 +10466,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-08-01-1153";
+  var VALIZ_VERSION = "2026-08-05-2050";
 
   // ---- Historique des ameliorations ---------------------------------------
   // Ecrit en langue d'utilisateur, pas en langue de developpeur : ce que la
