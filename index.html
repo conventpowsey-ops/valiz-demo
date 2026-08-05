@@ -1002,7 +1002,7 @@
         <button class="me-btn" id="meBtn" title="Mon compte"></button>
       </div>
     </div>
-    <p class="tagline">Le trajet de l'un, le colis de l'autre. <button type="button" class="how-link" id="infoBtn">Comment ça marche ?</button> · <button type="button" class="how-link" id="newsBtn">Nouveautés<span class="news-dot" id="newsDot" hidden></span></button> · <a class="how-link" href="mailto:conventpowsey@gmail.com?subject=Valiz%20beta%20-%20retour&body=Ce%20qui%20coince%20ou%20me%20semble%20bizarre%20:%0A">Signaler un bug</a></p>
+    <p class="tagline">Le trajet de l'un, le colis de l'autre. <button type="button" class="how-link" id="infoBtn">Comment ça marche ?</button> · <button type="button" class="how-link" id="newsBtn">Nouveautés<span class="news-dot" id="newsDot" hidden></span></button> · <a class="how-link" href="mailto:info@printactif.be?subject=Valiz%20beta%20-%20retour&body=Ce%20qui%20coince%20ou%20me%20semble%20bizarre%20:%0A">Signaler un bug</a></p>
     <div class="segmented" id="seg">
       <button data-seg="trajets" class="active">Voyageurs <span class="cnt" id="cntT"></span></button>
       <button data-seg="demandes">Expéditeurs <span class="cnt" id="cntD"></span></button>
@@ -9102,6 +9102,16 @@
       var msg = (err && err.message) || "";
       if (msg.indexOf("insuffisant") >= 0) { openBuy(id); }
       else if (msg.indexOf("compte requis") >= 0) { exigeCompte(function(){ openUnlock(id); }); }
+      else if (msg.indexOf("annonce introuvable") >= 0) {
+        // Cas reel : l'auteur a retire son annonce pendant qu'on la regardait.
+        // Aucun jeton n'a ete debite, il faut le dire, sinon la personne croit
+        // avoir paye pour rien.
+        showToast("Cette annonce vient d'être retirée. Aucun jeton n'a été débité.");
+        loadAnnonces();
+      }
+      else if (msg.indexOf("JWT") >= 0 || msg.indexOf("expired") >= 0 || msg.indexOf("401") >= 0) {
+        showToast("Ta session a expiré. Reconnecte-toi, ton solde est intact.");
+      }
       else { showToast("Déblocage impossible, réessaie."); }
     });
   }
@@ -10466,7 +10476,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-08-05-2050";
+  var VALIZ_VERSION = "2026-08-05-2156";
 
   // ---- Historique des ameliorations ---------------------------------------
   // Ecrit en langue d'utilisateur, pas en langue de developpeur : ce que la
