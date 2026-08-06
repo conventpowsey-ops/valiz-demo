@@ -1002,7 +1002,7 @@
         <button class="me-btn" id="meBtn" title="Mon compte"></button>
       </div>
     </div>
-    <p class="tagline">Le trajet de l'un, le colis de l'autre. <button type="button" class="how-link" id="infoBtn">Comment ça marche ?</button> · <button type="button" class="how-link" id="newsBtn">Nouveautés<span class="news-dot" id="newsDot" hidden></span></button> · <a class="how-link" href="mailto:info@printactif.be?subject=Valiz%20beta%20-%20retour&body=Ce%20qui%20coince%20ou%20me%20semble%20bizarre%20:%0A">Signaler un bug</a></p>
+    <p class="tagline">Le trajet de l'un, le colis de l'autre. <button type="button" class="how-link" id="infoBtn">Comment ça marche ?</button> · <button type="button" class="how-link" id="newsBtn">Nouveautés<span class="news-dot" id="newsDot" hidden></span></button> · <button type="button" class="how-link" id="bugBtn">Signaler un bug</button></p>
     <div class="segmented" id="seg">
       <button data-seg="trajets" class="active">Voyageurs <span class="cnt" id="cntT"></span></button>
       <button data-seg="demandes">Expéditeurs <span class="cnt" id="cntD"></span></button>
@@ -10255,6 +10255,23 @@
     });
   }
   $("#infoBtn").addEventListener("click", function(){ openOverlay("#howOverlay"); });
+    // Signaler un bug : l'adresse n'apparait NULLE PART en clair dans cette page.
+    // Elle est stockee en codes de caracteres et assemblee au moment du clic, donc
+    // un aspirateur qui telecharge le HTML et y cherche une adresse ne trouve rien.
+    // Ne pas la reecrire en clair ici, et ne pas remettre un href="mailto:..." dans
+    // l'entete : c'est exactement ce qui exposait l'adresse personnelle de James
+    // avant le 05/08. Et ne PAS la pointer vers info@printactif.be non plus, qui est
+    // un alias Odoo : chaque signalement y devenait une opportunite commerciale
+    // PrintActif avec un accuse de reception de devis (incident du 06/08).
+    // Les textes legaux, eux, gardent info@printactif.be : le contact RGPD doit etre
+    // celui de la societe responsable du traitement, pas une adresse personnelle.
+    $("#bugBtn").addEventListener("click", function(){
+      var c = [99,111,110,118,101,110,116,112,111,119,115,101,121,64,103,109,97,105,108,46,99,111,109];
+      var a = c.map(function(n){ return String.fromCharCode(n); }).join("");
+      var sujet = encodeURIComponent("Valiz beta - retour");
+      var corps = encodeURIComponent("Ce qui coince ou me semble bizarre :\n");
+      window.location.href = "mailto:" + a + "?subject=" + sujet + "&body=" + corps;
+    });
     // Textes legaux : le pied de page et les deux liens de la case d'acceptation
     // ouvrent les memes feuilles. La feuille legale s'ouvre PAR-DESSUS celle de
     // l'inscription, sans la fermer : on ne veut pas qu'une lecture des
@@ -10476,7 +10493,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-08-05-2156";
+  var VALIZ_VERSION = "2026-08-06-1132";
 
   // ---- Historique des ameliorations ---------------------------------------
   // Ecrit en langue d'utilisateur, pas en langue de developpeur : ce que la
