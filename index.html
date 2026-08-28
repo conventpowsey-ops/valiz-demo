@@ -8917,12 +8917,16 @@
         + '<button class="btn-danger" style="margin-top:12px" data-suppr="' + i.id + '">Retirer cette annonce</button>';
     } else if (isUnlocked) {
       html += contactHTML(unlocked[i.id]);
-      if (isTrajet && !i.isDemo && me) {
+      if (!i.isDemo && me) {
         var tr = transportPourAnnonce(i.id);
         if (!tr) {
-          html += '<button class="btn-primary" style="margin-top:12px" data-demander="' + i.id + '">'
-            + 'Demander ce transport</button>'
-            + '<p class="tr-code-hint">Tu déclares ce que tu envoies, le voyageur l\'inspecte ouvert avant d\'accepter. Vous convenez ensemble de la date et, s\'il y a des frais à partager, de la participation. Valiz garde seulement la trace de votre accord et te donne un code à remettre à l\'arrivée.</p>';
+          html += isTrajet
+            ? ('<button class="btn-primary" style="margin-top:12px" data-demander="' + i.id + '">'
+                + 'Demander ce transport</button>'
+                + '<p class="tr-code-hint">Tu déclares ce que tu envoies, le voyageur l\'inspecte ouvert avant d\'accepter. Vous convenez ensemble de la date et, s\'il y a des frais à partager, de la participation. Valiz garde seulement la trace de votre accord et te donne un code à remettre à l\'arrivée.</p>')
+            : ('<button class="btn-primary" style="margin-top:12px" data-proposer="' + i.id + '" data-contenu="' + esc(i.content || "") + '">'
+                + 'Proposer ce transport</button>'
+                + '<p class="tr-code-hint">Tu inspectes le colis ouvert avant de le prendre. Vous convenez ensemble de la date et, s\'il y a des frais à partager, de la participation. Valiz garde seulement la trace de votre accord et te donne un code à remettre à l\'arrivée.</p>');
         } else {
           // Le renvoi disait "depuis ton profil" : faux depuis que la bande
           // existe, et c'est justement l'endroit ou l'on ne trouvait rien.
@@ -8981,6 +8985,8 @@
     if (pk) { doBuy(parseInt(pk.dataset.pack, 10)); return; }
     var dem = e.target.closest("[data-demander]");
     if (dem) { demanderTransport(dem.dataset.demander); return; }
+    var prop = e.target.closest("[data-proposer]");
+    if (prop) { proposerTransport(prop.dataset.proposer, prop.dataset.contenu || ""); return; }
     var bt = e.target.closest("[data-buy]");
     if (bt) { openBuy(bt.dataset.buy || null); return; }
     var c = e.target.closest("[data-close]");
@@ -9515,12 +9521,19 @@
             ? '<div class="tr-sub" style="margin-top:6px">Colis déclaré : « ' + esc(t.contenu_declare) + ' »</div>'
             : '');
 
-    if (t.statut === "demande" && jeSuisVoyageur) {
+    // Qui doit repondre : celui dont l'horodatage de regles est encore vide.
+    // Couvre les deux sens (expediteur qui repond a une proposition recue sur
+    // sa demande, voyageur qui repond a une demande recue sur son trajet).
+    var monRegleAt = jeSuisVoyageur ? t.regles_voyageur_at : t.regles_expediteur_at;
+    var jeDoisRepondre = t.statut === "demande" && !monRegleAt;
+
+    if (jeDoisRepondre) {
       html += '<div class="tr-actions">'
-        + '<button class="tr-btn main" data-accepter="' + t.id + '" data-contenu="' + esc(t.contenu_declare || "") + '">Accepter</button>'
+        + '<button class="tr-btn main" data-accepter="' + t.id + '" data-contenu="' + esc(t.contenu_declare || "") + '" data-role="' + (jeSuisVoyageur ? "voyageur" : "expediteur") + '">'
+        + (jeSuisVoyageur ? "Accepter" : "Confirmer") + '</button>'
         + '<button class="tr-btn" data-refuser="' + t.id + '">Refuser</button></div>';
     } else if (t.statut === "demande") {
-      html += '<div class="tr-sub" style="margin-top:8px">En attente de la réponse du voyageur.</div>';
+      html += '<div class="tr-sub" style="margin-top:8px">En attente de la réponse ' + (jeSuisVoyageur ? "de l'expéditeur" : "du voyageur") + '.</div>';
     } else if (t.statut === "accepte" && jeSuisVoyageur) {
       html += '<div class="tr-actions"><button class="tr-btn main" data-valider="' + t.id + '">'
         + 'Saisir son code de remise</button></div>';
@@ -9626,24 +9639,44 @@
   // ---- Colis : declaration et regles, exigees a chaque transport ---------
   var colisCtx = null;
 
+  // role "expediteur" : declare le contenu et la conformite (envoi = premiere
+  // annonce sur un trajet, confirme = reponse a une proposition recue sur une
+  // demande). role "voyageur" : inspecte avant de prendre (accept = reponse a
+  // une demande de transport recue, propose = premiere offre sur une demande
+  // publiee). L'action (initie vs repond) determine le RPC ; le role determine
+  // le texte et les champs affiches.
+  var COLIS_MODES = {
+    envoi:    { role: "expediteur", initie: true,  title: "Ce que tu envoies",
+                sub: "Le voyageur doit savoir ce qu'il accepte, et pouvoir le vérifier de ses yeux.",
+                submit: "Envoyer la demande" },
+    confirme: { role: "expediteur", initie: false, title: "Avant de confirmer cet envoi",
+                sub: "Le voyageur doit savoir ce qu'il accepte, et pouvoir le vérifier de ses yeux.",
+                submit: "Je confirme l'envoi" },
+    accept:   { role: "voyageur", initie: false, title: "Avant d'accepter ce colis",
+                sub: "Tu réponds personnellement de ce que tu embarques. Prends une minute.",
+                submit: "J'accepte ce transport" },
+    propose:  { role: "voyageur", initie: true,  title: "Avant de proposer ce transport",
+                sub: "Tu réponds personnellement de ce que tu embarques. Prends une minute.",
+                submit: "Je propose ce transport" }
+  };
+
   function ouvrirColis(mode, ref, contenu) {
     colisCtx = { mode: mode, ref: ref };
-    var envoi = mode === "envoi";
-    $("#colisTitle").textContent = envoi ? "Ce que tu envoies" : "Avant d'accepter ce colis";
-    $("#colisSub").textContent = envoi
-      ? "Le voyageur doit savoir ce qu'il accepte, et pouvoir le vérifier de ses yeux."
-      : "Tu réponds personnellement de ce que tu embarques. Prends une minute.";
-    $("#colisContenuField").style.display = envoi ? "block" : "none";
-    $("#colisSurete").style.display = envoi ? "none" : "block";
-    $("#colisDeclare").innerHTML = (!envoi && contenu)
-      ? '<div class="declared"><div class="lbl">Ce que l\'expéditeur déclare envoyer</div>« ' + esc(contenu) + ' »</div>'
+    var m = COLIS_MODES[mode];
+    var expediteur = m.role === "expediteur";
+    $("#colisTitle").textContent = m.title;
+    $("#colisSub").textContent = m.sub;
+    $("#colisContenuField").style.display = (mode === "envoi") ? "block" : "none";
+    $("#colisSurete").style.display = expediteur ? "none" : "block";
+    $("#colisDeclare").innerHTML = (mode !== "envoi" && contenu)
+      ? '<div class="declared"><div class="lbl">' + (mode === "confirme" ? "Ce que tu as déclaré vouloir envoyer" : "Ce que l'expéditeur déclare envoyer") + '</div>« ' + esc(contenu) + ' »</div>'
       : "";
-    $("#colisCheckTxt").innerHTML = envoi
-      ? "Je déclare que mon colis ne contient <b>rien</b> de la liste ci-dessus, et je le remettrai <b>ouvert</b> pour que le voyageur le vérifie."
+    $("#colisCheckTxt").innerHTML = expediteur
+      ? "Je déclare que mon colis ne contient <b>rien</b> de la liste ci-dessus, et je le remettrai <b>ouvert</b> pour que le voyageur le vérifie. Je prends <b>à ma charge</b> toute conséquence si ce colis pose problème au voyageur, notamment en cas de contrôle douanier ou de sûreté."
       : "J'ouvrirai et j'inspecterai le colis avant de le prendre. Je sais que je réponds <b>personnellement</b> de ce que j'embarque, devant la compagnie et devant la douane.";
     $("#colisCheck").checked = false;
     $("#colisSubmit").disabled = true;
-    $("#colisSubmit").textContent = envoi ? "Envoyer la demande" : "J'accepte ce transport";
+    $("#colisSubmit").textContent = m.submit;
     $("#colisForm").contenu.value = "";
     openOverlay("#colisOverlay");
   }
@@ -9669,10 +9702,19 @@
         }), "Demande envoyée au voyageur.")
         .then(function(){ closeAll(); ouvrirProfil(); })
         .then(null, function(){ btn.disabled = false; });
+    } else if (colisCtx.mode === "propose") {
+      agirTransport(rpc("proposer_transport", {
+          p_annonce: colisCtx.ref, p_regles: true
+        }), "Proposition envoyée à l'expéditeur.")
+        .then(function(){ closeAll(); ouvrirProfil(); })
+        .then(null, function(){ btn.disabled = false; });
     } else {
+      var msgOk = colisCtx.mode === "confirme"
+        ? "Envoi confirmé. Ton code de remise t'attend dans ton profil."
+        : "Transport accepté. L'expéditeur reçoit son code.";
       agirTransport(rpc("repondre_transport", {
           p_transport: colisCtx.ref, p_accepte: true, p_regles: true
-        }), "Transport accepté. L'expéditeur reçoit son code.")
+        }), msgOk)
         .then(function(){ closeOverlay("#colisOverlay"); })
         .then(null, function(){ btn.disabled = false; });
     }
@@ -9680,6 +9722,10 @@
 
   function demanderTransport(id) {
     exigeCompte(function(){ ouvrirColis("envoi", id, null); });
+  }
+
+  function proposerTransport(id, contenu) {
+    exigeCompte(function(){ ouvrirColis("propose", id, contenu); });
   }
 
   // ---- Profil -----------------------------------------------------------
@@ -10075,7 +10121,8 @@
   document.addEventListener("click", function(e){
     var acc = e.target.closest("[data-accepter]");
     if (acc) {
-      ouvrirColis("accept", acc.dataset.accepter, acc.dataset.contenu || "");
+      var modeRep = acc.dataset.role === "expediteur" ? "confirme" : "accept";
+      ouvrirColis(modeRep, acc.dataset.accepter, acc.dataset.contenu || "");
       return;
     }
     var ref = e.target.closest("[data-refuser]");
@@ -10493,7 +10540,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-08-06-1132";
+  var VALIZ_VERSION = "2026-08-28-1541";
 
   // ---- Historique des ameliorations ---------------------------------------
   // Ecrit en langue d'utilisateur, pas en langue de developpeur : ce que la
