@@ -962,12 +962,17 @@
   .dash-track { height:9px; background:var(--line); border-radius:5px; overflow:hidden; }
   .dash-fill { height:100%; background:var(--blue); border-radius:5px; min-width:5px; }
   /* Barres jours : une serie, marks fins ancres a la baseline. */
-  .dash-days { display:flex; align-items:flex-end; gap:4px; height:96px; padding-top:6px; }
-  .dash-days .col { flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:3px; height:100%; }
-  .dash-days .val { font-size:12px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; }
-  .dash-days .bar { width:100%; max-width:22px; background:var(--gold); border-radius:4px 4px 0 0; min-height:3px; }
+  /* Piege paye le 29/09 : sans min-width:0, chaque colonne gardait la largeur de
+     sa legende "jj/mm" ; au-dela d'une quinzaine de jours la rangee depassait la
+     feuille, qui clippe en overflow-x:hidden, et les jours RECENTS disparaissaient
+     a droite sans aucun moyen de defiler. Les colonnes doivent pouvoir retrecir. */
+  .dash-days { display:flex; align-items:flex-end; gap:2px; height:96px; padding:6px 0 0; }
+  .dash-days .col { flex:1 1 0; min-width:0; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:3px; height:100%; }
+  .dash-days .val { font-size:10px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; line-height:1; }
+  .dash-days .bar { width:100%; max-width:22px; background:var(--gold); border-radius:3px 3px 0 0; min-height:2px; }
   .dash-days .bar.b2 { background:var(--blue); }
-  .dash-days .cap { font-size:10px; color:var(--ink-soft); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .dash-days .bar.zero { background:var(--line); }
+  .dash-days .cap { font-size:10px; color:var(--ink-soft); font-variant-numeric:tabular-nums; white-space:nowrap; height:12px; line-height:12px; }
   .dash-corr { list-style:none; padding:0; margin:0; }
   .dash-corr li { display:flex; align-items:center; gap:8px; padding:5px 0; font-size:13px; }
   .dash-corr .r { flex:0 0 auto; font-weight:700; color:var(--ink); min-width:96px; }
@@ -10540,7 +10545,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-08-28-1541";
+  var VALIZ_VERSION = "2026-09-29-0400";
 
   // ---- Historique des ameliorations ---------------------------------------
   // Ecrit en langue d'utilisateur, pas en langue de developpeur : ce que la
@@ -10671,17 +10676,34 @@
     if (!arr || !arr.length) {
       return '<p class="dash-sub" style="margin:6px 0 0">Le comptage démarre aujourd\'hui.</p>';
     }
+    // Serie continue de 30 jours finissant aujourd'hui : le serveur ne renvoie que
+    // les jours non nuls, et les juxtaposer faisait disparaitre les jours creux.
+    var parJour = {}, dernier = '';
+    arr.forEach(function(d){ var k = String(d.jour).slice(0, 10); parJour[k] = d[cle] || 0; if (k > dernier) dernier = k; });
+    var auj = new Date(), cle2 = function(dt){
+      return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+    };
+    // Heure de l'appareil en avance sur le serveur (UTC) : on ne coupe jamais le dernier jour connu.
+    var fin = cle2(auj) >= dernier ? auj : new Date(dernier + 'T12:00:00');
+    var serie = [];
+    for (var i = 29; i >= 0; i--) {
+      var dt = new Date(fin.getFullYear(), fin.getMonth(), fin.getDate() - i);
+      var k = cle2(dt);
+      serie.push({ jour: k, v: parJour[k] || 0 });
+    }
     var max = 1;
-    arr.forEach(function(d){ if (d[cle] > max) max = d[cle]; });
-    return '<div class="dash-days">' + arr.map(function(d){
-      // La barre occupe la moitie basse au minimum quand il n'y a qu'une valeur,
-      // sinon une seule journee ecrase toutes les autres a une hauteur nulle.
-      var h = 25 + Math.round((d[cle] / max) * 70);
-      var jj = String(d.jour).slice(8, 10), mm = String(d.jour).slice(5, 7);
-      return '<div class="col" title="' + esc(String(d.jour)) + ' : ' + d[cle] + '">'
-        + '<div class="val">' + d[cle] + '</div>'
-        + '<div class="bar ' + (classe || '') + '" style="height:' + h + '%"></div>'
-        + '<div class="cap">' + jj + '/' + mm + '</div></div>';
+    serie.forEach(function(d){ if (d.v > max) max = d.v; });
+    return '<div class="dash-days">' + serie.map(function(d, idx){
+      // Une journee non nulle occupe au moins un cinquieme de la hauteur, sinon un
+      // pic ecrase toutes les autres a une hauteur illisible.
+      var h = d.v ? 20 + Math.round((d.v / max) * 70) : 0;
+      var jj = d.jour.slice(8, 10), mm = d.jour.slice(5, 7);
+      // Legende une semaine sur une, en partant d'aujourd'hui : 30 dates ne tiennent pas en largeur.
+      var cap = (29 - idx) % 7 === 0 ? jj + '/' + mm : '';
+      return '<div class="col" title="' + esc(jj + '/' + mm) + ' : ' + d.v + '">'
+        + '<div class="val">' + (d.v || '') + '</div>'
+        + '<div class="bar ' + (d.v ? (classe || '') : 'zero') + '" style="height:' + (d.v ? h + '%' : '2px') + '"></div>'
+        + '<div class="cap">' + cap + '</div></div>';
     }).join('') + '</div>';
   }
 
