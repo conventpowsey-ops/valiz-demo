@@ -9861,7 +9861,10 @@
     var lien = b.getAttribute("data-partager");
     var texte = "Rejoins-moi sur Valiz : tes colis voyagent avec ceux qui prennent l'avion. " + lien;
     if (navigator.share) {
-      navigator.share({ title: "Valiz", text: texte, url: lien }).catch(function(){});
+      // Le lien est déjà dans le texte : le repasser dans "url" le fait apparaître deux fois
+      // dans WhatsApp et la plupart des messageries, qui collent text et url bout à bout
+      // (retour bêta de Clémence, 26/07).
+      navigator.share({ title: "Valiz", text: texte }).catch(function(){});
     } else if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(lien)
         .then(function(){ showToast("Lien copié, colle-le dans ton groupe."); })
@@ -10545,7 +10548,7 @@
   // qu'une version est sortie. version.json est lu avec cache: "no-store", donc
   // il echappe au cache HTTP et repond toujours la verite. Les deux valeurs sont
   // estampillees ensemble par cerveau/scripts/valiz_version.py, jamais a la main.
-  var VALIZ_VERSION = "2026-09-29-0400";
+  var VALIZ_VERSION = "2026-10-16-0703";
 
   // ---- Historique des ameliorations ---------------------------------------
   // Ecrit en langue d'utilisateur, pas en langue de developpeur : ce que la
